@@ -17,8 +17,10 @@ def _build_client() -> GoogleAdsClient:
     from google.oauth2.credentials import Credentials
     from google.auth.transport.requests import Request
 
-    token_path = os.path.join(os.path.dirname(__file__), "..", "credentials", "token.json")
-    client_secret_path = os.path.join(os.path.dirname(__file__), "..", "credentials", "client_secret.json")
+    std_token = os.path.join(os.path.dirname(__file__), "..", "credentials", "token.json")
+    std_secret = os.path.join(os.path.dirname(__file__), "..", "credentials", "client_secret.json")
+    token_path = std_token if os.path.exists(std_token) else "/tmp/token.json"
+    client_secret_path = std_secret if os.path.exists(std_secret) else "/tmp/client_secret.json"
 
     with open(token_path) as f:
         token_data = json.load(f)

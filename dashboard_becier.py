@@ -33,12 +33,12 @@ def _setup_credentials():
         for key, val in secrets.items():
             if isinstance(val, str):
                 os.environ.setdefault(key, val)
-        creds_dir = Path(__file__).parent / "credentials"
-        creds_dir.mkdir(exist_ok=True)
+        # Escribir credenciales en /tmp/ (siempre escribible en Streamlit Cloud)
+        tmp = Path("/tmp")
         if "GOOGLE_TOKEN_JSON" in secrets:
-            (creds_dir / "token.json").write_text(secrets["GOOGLE_TOKEN_JSON"])
+            (tmp / "token.json").write_text(secrets["GOOGLE_TOKEN_JSON"])
         if "GOOGLE_CLIENT_SECRET_JSON" in secrets:
-            (creds_dir / "client_secret.json").write_text(secrets["GOOGLE_CLIENT_SECRET_JSON"])
+            (tmp / "client_secret.json").write_text(secrets["GOOGLE_CLIENT_SECRET_JSON"])
     except Exception:
         pass
 
