@@ -27,8 +27,19 @@ def _get_account_id(account: str = "default") -> str:
     return aid if aid.startswith("act_") else f"act_{aid}"
 
 
+def _appsecret_proof(token: str) -> str:
+    import hmac, hashlib
+    secret = os.environ.get("META_APP_SECRET", "")
+    if not secret:
+        return ""
+    return hmac.new(secret.encode(), token.encode(), hashlib.sha256).hexdigest()
+
 def _get(path: str, params: dict) -> dict:
-    params["access_token"] = _get_token()
+    token = _get_token()
+    params["access_token"] = token
+    proof = _appsecret_proof(token)
+    if proof:
+        params["appsecret_proof"] = proof
     resp = requests.get(f"{META_BASE_URL}{path}", params=params, timeout=15)
     return resp.json()
 
