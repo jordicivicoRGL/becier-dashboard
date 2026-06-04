@@ -236,14 +236,17 @@ def month_label(since: str) -> str:
 # ─── PARSEO DE NOMBRE DE CAMPAÑA ─────────────────────────────────────────────
 # Formato: AND_PROS_[VERTICAL]_[OBJETIVO]
 _VERTICAL_MAP = {
-    "VEHICLES": "Vehicles",
-    "VO":       "Vehicles",   # Vehicles-Pla-Engega → amarillo
-    "BECAR":    "Becar",
-    "AVIS":     "Becar",      # AVIS-BECAR → turquesa
-    "BECSER":   "Becser",
-    "GRUP":     "Grup Becier",
-    "BECIER":   "Grup Becier",
-    "OKSIO":    "Oksio",
+    "VEHICLES":            "Vehicles",
+    "VO":                  "Vehicles",
+    "VEHICLES-PLA-ENGEGA": "Vehicles",
+    "VEHICLES-LEAD":       "Vehicles",
+    "BECAR":               "Becar",
+    "AVIS":                "Becar",
+    "AVIS-BECAR":          "Becar",
+    "BECSER":              "Becser",
+    "GRUP":                "Grup Becier",
+    "BECIER":              "Grup Becier",
+    "OKSIO":               "Oksio",
 }
 _OBJETIVO_MAP = {
     "LEAD AD":   "Lead Ad",
@@ -256,23 +259,54 @@ _OBJETIVO_MAP = {
     "REACH":     "Impresiones",
 }
 
+_GOOGLE_CAMPAIGN_TYPES = {"SEARCH", "DISPLAY", "SHOPPING", "PMAX", "VIDEO",
+                          "DSA", "PERFORMANCE", "SMART", "DISCOVERY"}
+
 def parse_campaign_parts(name: str) -> dict:
-    """Extrae Vertical y Objetivo del nombre AND_PROS_[VERTICAL]_[OBJETIVO]."""
+    """Extrae Vertical y Objetivo según el formato del nombre de campaña.
+    Meta:   AND_PROS_[VERTICAL]_[OBJETIVO]   → vertical en pos 2, objetivo en pos 3+
+    Google: [TIPO]_[OBJETIVO]_[VERTICAL]_... → vertical en pos 2, objetivo en pos 1
+    """
     parts = [p.strip() for p in name.split("_")]
     vertical = "Otros"
     objetivo = "—"
-    if len(parts) >= 3:
-        v = parts[2].upper()
-        vertical = _VERTICAL_MAP.get(v, parts[2].title())
-    if len(parts) >= 4:
-        objetivo = None
-        for end in range(len(parts), 3, -1):
-            candidate = " ".join(parts[3:end]).upper()
-            if candidate in _OBJETIVO_MAP:
-                objetivo = _OBJETIVO_MAP[candidate]
-                break
-        if objetivo is None:
-            objetivo = parts[3].title()
+
+    if not parts:
+        return {"vertical": vertical, "objetivo": objetivo}
+
+    # Detectar formato Google por el tipo de campaña en parts[0]
+    is_google_format = parts[0].upper() in _GOOGLE_CAMPAIGN_TYPES
+
+    if is_google_format:
+        # TIPO_OBJETIVO_VERTICAL_NOMBRE
+        if len(parts) >= 2:
+            objetivo = _OBJETIVO_MAP.get(parts[1].upper(), parts[1].title())
+        if len(parts) >= 3:
+            vertical = _VERTICAL_MAP.get(parts[2].upper(), parts[2].title())
+    else:
+        # Formato Meta: AND_PROS_VERTICAL_OBJETIVO o similar
+        # Buscar vertical en pos 2, o escanear todas las partes
+        if len(parts) >= 3:
+            v = parts[2].upper()
+            vertical = _VERTICAL_MAP.get(v, "Otros")
+            if vertical == "Otros":
+                for part in parts:
+                    # Buscar la parte completa primero, luego la primera palabra antes del guión
+                    mapped = _VERTICAL_MAP.get(part.upper()) or _VERTICAL_MAP.get(part.upper().split("-")[0])
+                    if mapped:
+                        vertical = mapped
+                        break
+
+        if len(parts) >= 4:
+            objetivo = None
+            for end in range(len(parts), 3, -1):
+                candidate = " ".join(parts[3:end]).upper()
+                if candidate in _OBJETIVO_MAP:
+                    objetivo = _OBJETIVO_MAP[candidate]
+                    break
+            if objetivo is None:
+                objetivo = parts[3].title()
+
     return {"vertical": vertical, "objetivo": objetivo}
 
 VERTICAL_STYLES = {
@@ -1559,8 +1593,12 @@ def main():
             st.markdown('<div style="color:#6a7aaa;font-size:12px">Datos del año 2026<br>1 ene → hoy</div>',
                         unsafe_allow_html=True)
         else:
-            st.markdown('<div style="color:#6a7aaa;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Período</div>',
-                        unsafe_allow_html=True)
+            pass
+
+        st.markdown('<hr style="border-color:#1a1e35;margin:12px 0">', unsafe_allow_html=True)
+
+        # Filtro de vertical en sidebar (se rellenará tras fetch)
+        sidebar_vert_placeholder = st.empty()
 
         st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
         if st.button("🔄  Refrescar datos", use_container_width=True):
@@ -1625,6 +1663,19 @@ def main():
         unsafe_allow_html=True)
 
 
+    # ── Filtro global de vertical (en sidebar) ───────────────────────────────
+    VERT_EMOJI = {"Vehicles":"🟡","Becser":"🟢","Becar":"🔴","Oksio":"🟠","Grup Becier":"🟠","Otros":"⚪"}
+    all_verts_global = sorted({c.get("Vertical","") for c in meta_camps + google_camps if c.get("Vertical")})
+    vert_labels_global = {f'{VERT_EMOJI.get(v,"⚪")} {v}': v for v in all_verts_global}
+    with sidebar_vert_placeholder:
+        sel_vert_global_label = st.selectbox("Vertical", ["🔘 Todos"] + list(vert_labels_global.keys()), key="global_vert_filter")
+    sel_vert_global = None if sel_vert_global_label == "🔘 Todos" else vert_labels_global.get(sel_vert_global_label)
+
+    # Aplicar filtro a todos los datos
+    meta_camps_f  = meta_camps  if not sel_vert_global else [c for c in meta_camps  if c.get("Vertical") == sel_vert_global]
+    meta_adsets_f = meta_adsets if not sel_vert_global else [a for a in meta_adsets if a.get("Vertical") == sel_vert_global]
+    google_camps_f = google_camps if not sel_vert_global else [c for c in google_camps if c.get("Vertical") == sel_vert_global]
+
     # ── KPIs: dos columnas por plataforma ───────────────────────────────────
     col_meta, col_google = st.columns(2, gap="large")
 
@@ -1634,44 +1685,47 @@ def main():
     with col_meta:
         st.markdown(platform_header("Meta Ads", f"Cuenta Becier · {_meta_account_id()}", "meta"),
                     unsafe_allow_html=True)
-        if meta_sum.get("error"):
+        if meta_sum.get("error") and not meta_camps_f:
             st.markdown(f'<p style="color:#f87171;font-size:13px">⚠ {meta_sum["error"]}</p>',
                         unsafe_allow_html=True)
         else:
-            ms = meta_sum
-            c1, c2, c3 = st.columns(3)
-            c1.markdown(kpi_card("Gasto total", fmt_eur(ms["spend_eur"]), "💰", accent=META_COLOR), unsafe_allow_html=True)
-            c2.markdown(kpi_card("Alcance", fmt_num(ms["reach"]), "👁️", accent=META_COLOR), unsafe_allow_html=True)
-            c3.markdown(kpi_card("Impresiones", fmt_num(ms["impressions"]), "📊", accent=META_COLOR), unsafe_allow_html=True)
+            # KPIs calculados desde campañas filtradas (consistente con el filtro de vertical)
+            mf_spend = sum(c.get("Gasto (€)", 0) for c in meta_camps_f)
+            mf_imp   = sum(c.get("Impresiones", 0) for c in meta_camps_f)
+            mf_alc   = sum(c.get("Alcance", 0) for c in meta_camps_f)
+            mf_cli   = sum(c.get("Clics enlace", 0) for c in meta_camps_f)
+            mf_cpm   = round(mf_spend / mf_imp * 1000, 2) if mf_imp else 0
+            mf_ctr   = round(mf_cli / mf_imp * 100, 2)   if mf_imp else 0
+            mf_cpc   = round(mf_spend / mf_cli, 2)        if mf_cli else 0
 
-            total_clics_meta = sum(c.get("Clics enlace", 0) for c in meta_camps)
-            cpc_meta = round(ms["spend_eur"] / total_clics_meta, 2) if total_clics_meta > 0 else 0
+            c1, c2, c3 = st.columns(3)
+            c1.markdown(kpi_card("Gasto total", fmt_eur(mf_spend), "💰", accent=META_COLOR), unsafe_allow_html=True)
+            c2.markdown(kpi_card("Alcance", fmt_num(mf_alc), "👁️", accent=META_COLOR), unsafe_allow_html=True)
+            c3.markdown(kpi_card("Impresiones", fmt_num(mf_imp), "📊", accent=META_COLOR), unsafe_allow_html=True)
 
             c4, c5, c6 = st.columns(3)
-            c4.markdown(kpi_card("CPM", fmt_eur(ms["cpm"]), "📈", accent=META_COLOR), unsafe_allow_html=True)
-            c5.markdown(kpi_card("CTR", fmt_pct(ms["ctr_pct"]), "🖱️", accent=META_COLOR), unsafe_allow_html=True)
-            c6.markdown(kpi_card("CPC", fmt_eur(cpc_meta), "💶", accent=META_COLOR), unsafe_allow_html=True)
+            c4.markdown(kpi_card("CPM", fmt_eur(mf_cpm), "📈", accent=META_COLOR), unsafe_allow_html=True)
+            c5.markdown(kpi_card("CTR", fmt_pct(mf_ctr), "🖱️", accent=META_COLOR), unsafe_allow_html=True)
+            c6.markdown(kpi_card("CPC", fmt_eur(mf_cpc), "💶", accent=META_COLOR), unsafe_allow_html=True)
 
-            # Resultados desglosados por objetivo (usando datos por campaña)
             by_obj: dict[str, dict] = {}
-            for c in meta_camps:
+            for c in meta_camps_f:
                 obj = c.get("Objetivo", "—")
                 if obj not in by_obj:
                     by_obj[obj] = {"spend": 0, "results": 0}
                 by_obj[obj]["spend"]   += c.get("Gasto (€)", 0)
                 by_obj[obj]["results"] += c.get("Resultado", 0)
 
-            # Fila 3: Leads | CPL | Result. landing | CPR — 4 columnas
-            d_lead   = by_obj.get("Lead Ad", {"spend":0,"results":0})
-            d_land   = by_obj.get("Landing",  {"spend":0,"results":0})
-            cpl  = round(d_lead["spend"] / d_lead["results"], 2) if d_lead["results"] > 0 else None
-            cpr  = round(d_land["spend"] / d_land["results"], 2) if d_land["results"] > 0 else None
+            d_lead = by_obj.get("Lead Ad", {"spend":0,"results":0})
+            d_land = by_obj.get("Landing",  {"spend":0,"results":0})
+            cpl = round(d_lead["spend"] / d_lead["results"], 2) if d_lead["results"] > 0 else None
+            cpr = round(d_land["spend"] / d_land["results"], 2) if d_land["results"] > 0 else None
 
             r3a, r3b, r3c, r3d = st.columns(4)
-            r3a.markdown(kpi_card("Leads",            fmt_num(d_lead["results"]), "🎯", accent=META_COLOR), unsafe_allow_html=True)
-            r3b.markdown(kpi_card("CPL",              fmt_eur(cpl),              "💡", accent=META_COLOR), unsafe_allow_html=True)
-            r3c.markdown(kpi_card("Result. landing",  fmt_num(d_land["results"]), "🌐", accent=META_COLOR), unsafe_allow_html=True)
-            r3d.markdown(kpi_card("CPR landing",      fmt_eur(cpr),              "💡", accent=META_COLOR), unsafe_allow_html=True)
+            r3a.markdown(kpi_card("Leads",           fmt_num(d_lead["results"]), "🎯", accent=META_COLOR), unsafe_allow_html=True)
+            r3b.markdown(kpi_card("CPL",             fmt_eur(cpl),               "💡", accent=META_COLOR), unsafe_allow_html=True)
+            r3c.markdown(kpi_card("Result. landing", fmt_num(d_land["results"]), "🌐", accent=META_COLOR), unsafe_allow_html=True)
+            r3d.markdown(kpi_card("CPR landing",     fmt_eur(cpr),               "💡", accent=META_COLOR), unsafe_allow_html=True)
 
     with col_google:
         st.markdown(platform_header("Google Ads", "Cuenta Becier · 1632468817", "google"),
@@ -1679,10 +1733,11 @@ def main():
         if google_error:
             st.markdown(f'<p style="color:#f87171;font-size:13px">⚠ {google_error}</p>',
                         unsafe_allow_html=True)
-        elif google_camps:
-            total_imp  = sum(c["Impresiones"] for c in google_camps)
-            total_cli  = sum(c["Clics"] for c in google_camps)
-            total_conv = sum(c["Conversiones"] for c in google_camps)
+        elif google_camps_f:
+            google_spend = sum(c["Gasto (€)"] for c in google_camps_f)
+            total_imp  = sum(c["Impresiones"] for c in google_camps_f)
+            total_cli  = sum(c["Clics"] for c in google_camps_f)
+            total_conv = sum(c["Conversiones"] for c in google_camps_f)
             avg_ctr    = (total_cli / total_imp * 100) if total_imp else 0
             avg_cpc    = (google_spend / total_cli) if total_cli else 0
             avg_cpm    = (google_spend / total_imp * 1000) if total_imp else 0
@@ -1724,15 +1779,15 @@ def main():
 
     with col_donut:
         chart_label("Presupuesto por vertical")
-        if meta_camps or google_camps:
-            st.plotly_chart(chart_desglose_vertical(meta_camps, google_camps),
+        if meta_camps_f or google_camps_f:
+            st.plotly_chart(chart_desglose_vertical(meta_camps_f, google_camps_f),
                             use_container_width=True, config=_NO_INTERACT)
         else:
             st.markdown('<p style="color:#5a6080;font-size:13px">Sin datos.</p>', unsafe_allow_html=True)
 
     with col_cpl:
         chart_label("CPL / CPR por vertical y canal")
-        fig_cpr = chart_cpr_por_vertical_canal(meta_camps, google_camps)
+        fig_cpr = chart_cpr_por_vertical_canal(meta_camps_f, google_camps_f)
         if fig_cpr.data:
             st.plotly_chart(fig_cpr, use_container_width=True, config=_NO_INTERACT)
         else:
@@ -1747,31 +1802,21 @@ def main():
 
     with tab_meta:
         st.markdown('<div style="height:12px"></div>', unsafe_allow_html=True)
+        if sel_vert_global:
+            st.markdown(f'<div style="color:#5a6080;font-size:11px;margin-bottom:8px">Filtro activo: {sel_vert_global_label}</div>', unsafe_allow_html=True)
 
-        # Filtro por vertical con emojis de color
-        VERT_EMOJI = {"Vehicles":"🟡","Becser":"🟢","Becar":"🔴","Oksio":"🟠","Grup Becier":"🟠","Otros":"⚪"}
-        all_verts_meta = sorted({c.get("Vertical","Otros") for c in meta_camps if c.get("Vertical")})
-        vert_labels    = {f'{VERT_EMOJI.get(v,"⚪")} {v}': v for v in all_verts_meta}
-        vert_options   = ["🔘 Todos"] + list(vert_labels.keys())
-        col_filt, _ = st.columns([1, 3])
-        with col_filt:
-            sel_vert_label = st.selectbox("Filtrar por vertical", vert_options, key="meta_vert_filter")
-
-        sel_vert = None if sel_vert_label == "🔘 Todos" else vert_labels.get(sel_vert_label)
-        filtered_camps  = meta_camps  if not sel_vert else [c for c in meta_camps  if c.get("Vertical") == sel_vert]
-        filtered_adsets = meta_adsets if not sel_vert else [a for a in meta_adsets if a.get("Vertical") == sel_vert]
-
-        render_meta_table(filtered_camps)
+        render_meta_table(meta_camps_f)
         st.markdown('<div style="height:20px"></div>', unsafe_allow_html=True)
         st.markdown('<div style="color:#5a6080;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Por conjunto de anuncios (Adset)</div>', unsafe_allow_html=True)
-        render_meta_adsets_table(filtered_adsets)
+        render_meta_adsets_table(meta_adsets_f)
 
         # ── Creatividades ──────────────────────────────────────────────────
         st.markdown('<div style="height:20px"></div>', unsafe_allow_html=True)
         st.markdown('<div style="color:#5a6080;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">Creatividades</div>', unsafe_allow_html=True)
 
-        if meta_adsets:
-            camp_names = sorted({a["Campaña"] for a in meta_adsets})
+        adsets_for_creatives = meta_adsets_f if sel_vert_global else meta_adsets
+        if adsets_for_creatives:
+            camp_names = sorted({a["Campaña"] for a in adsets_for_creatives})
             col_s1, col_s2 = st.columns(2)
             with col_s1:
                 sel_camp = st.selectbox("Campaña", camp_names, key="cr_camp")
@@ -1779,7 +1824,7 @@ def main():
             # Adsets únicos de la campaña seleccionada
             seen_ids: set = set()
             all_camp_adsets: list[tuple[str,str]] = []
-            for a in meta_adsets:
+            for a in adsets_for_creatives:
                 if a["Campaña"] == sel_camp:
                     aid = a.get("_adset_id","")
                     if aid and aid not in seen_ids:
@@ -1820,16 +1865,9 @@ def main():
 
     with tab_google:
         st.markdown('<div style="height:12px"></div>', unsafe_allow_html=True)
-
-        all_verts_google = sorted({c.get("Vertical","Otros") for c in google_camps if c.get("Vertical")})
-        vert_labels_g    = {f'{VERT_EMOJI.get(v,"⚪")} {v}': v for v in all_verts_google}
-        col_fg, _ = st.columns([1, 3])
-        with col_fg:
-            sel_vert_g_label = st.selectbox("Filtrar por vertical", ["🔘 Todos"] + list(vert_labels_g.keys()), key="google_vert_filter")
-
-        sel_vert_g      = None if sel_vert_g_label == "🔘 Todos" else vert_labels_g.get(sel_vert_g_label)
-        filtered_google = google_camps if not sel_vert_g else [c for c in google_camps if c.get("Vertical") == sel_vert_g]
-        render_google_table(filtered_google)
+        if sel_vert_global:
+            st.markdown(f'<div style="color:#5a6080;font-size:11px;margin-bottom:8px">Filtro activo: {sel_vert_global_label}</div>', unsafe_allow_html=True)
+        render_google_table(google_camps_f)
 
         # ── Keywords ──────────────────────────────────────────────────────
         st.markdown('<div style="height:20px"></div>', unsafe_allow_html=True)
@@ -1844,7 +1882,8 @@ def main():
             with col_fkw:
                 sel_kw_label = st.selectbox("Filtrar por vertical", ["🔘 Todos"] + list(vert_labels_kw.keys()), key="kw_vert_filter")
             sel_kw = None if sel_kw_label == "🔘 Todos" else vert_labels_kw.get(sel_kw_label)
-            filtered_kws = kws if not sel_kw else [k for k in kws if k.get("Vertical") == sel_kw]
+            filtered_kws = [k for k in kws if not sel_kw and not sel_vert_global or
+                            k.get("Vertical") == (sel_kw or sel_vert_global)]
             render_google_keywords_table(filtered_kws)
 
     # ── Footer ──────────────────────────────────────────────────────────────
