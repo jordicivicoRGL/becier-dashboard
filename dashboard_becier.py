@@ -245,8 +245,9 @@ _VERTICAL_MAP = {
     "AVIS-BECAR":          "Becar",
     "BECSER":              "Becser",
     "GRUP":                "Grup Becier",
+    "GRUP-BECIER":         "Grup Becier",
     "BECIER":              "Grup Becier",
-    "OKSIO":               "Oksio",
+    "OKSIO":               "Vehicles",
 }
 _OBJETIVO_MAP = {
     "LEAD AD":   "Lead Ad",
@@ -915,29 +916,39 @@ COLOR_VERT = {"Vehicles":"#f0c030","Becar":"#f87171","Becser":"#22c55e",
               "Oksio":"#f97316","Grup Becier":"#f97316","Otros":"#555"}
 
 
+_MONTHS_CA = {"January":"Gener","February":"Febrer","March":"Març","April":"Abril",
+              "May":"Maig","June":"Juny","July":"Juliol","August":"Agost",
+              "September":"Setembre","October":"Octubre","November":"Novembre","December":"Desembre"}
+
 def chart_inversion_semanal(meta_daily: list, google_daily: list) -> go.Figure:
-    """Barras agrupadas: inversión semanal Meta + Google."""
-    def to_weekly(dl, label):
+    """Barras agrupadas: inversión mensual Meta + Google."""
+    def to_monthly(dl):
         if not dl:
-            return pd.DataFrame(columns=["week","spend"])
+            return pd.DataFrame(columns=["month","spend"])
         df = pd.DataFrame(dl)
         df["date"] = pd.to_datetime(df["date"])
-        df["week"] = df["date"].dt.to_period("W").apply(lambda r: r.start_time.strftime("%d %b"))
-        return df.groupby("week")["spend"].sum().reset_index()
+        df["month"] = df["date"].dt.to_period("M").apply(
+            lambda r: _MONTHS_CA.get(r.start_time.strftime("%B"), r.start_time.strftime("%B"))
+                      + " " + r.start_time.strftime("%Y"))
+        df["month_order"] = df["date"].dt.to_period("M").apply(lambda r: str(r))
+        grp = df.groupby(["month","month_order"])["spend"].sum().reset_index()
+        return grp.sort_values("month_order")
 
-    meta_w   = to_weekly(meta_daily, "Meta")
-    google_w = to_weekly(google_daily, "Google")
-    weeks    = sorted(set(list(meta_w["week"]) + list(google_w["week"])))
+    meta_m   = to_monthly(meta_daily)
+    google_m = to_monthly(google_daily)
+    months   = sorted(set(list(meta_m["month"]) + list(google_m["month"])),
+                      key=lambda m: meta_m.set_index("month")["month_order"].to_dict().get(m,
+                          google_m.set_index("month")["month_order"].to_dict().get(m, m)))
 
-    meta_idx   = meta_w.set_index("week")["spend"]
-    google_idx = google_w.set_index("week")["spend"]
-    meta_vals   = [meta_idx.get(w, 0) for w in weeks]
-    google_vals = [google_idx.get(w, 0) for w in weeks]
+    meta_idx   = meta_m.set_index("month")["spend"]
+    google_idx = google_m.set_index("month")["spend"]
+    meta_vals   = [meta_idx.get(w, 0) for w in months]
+    google_vals = [google_idx.get(w, 0) for w in months]
 
     fig = go.Figure()
-    fig.add_trace(go.Bar(x=weeks, y=meta_vals, name="Meta Ads", marker_color="#4a7fff",
+    fig.add_trace(go.Bar(x=list(months), y=meta_vals, name="Meta Ads", marker_color="#4a7fff",
                          hovertemplate="<b>Meta</b>: %{y:,.2f} €<extra></extra>"))
-    fig.add_trace(go.Bar(x=weeks, y=google_vals, name="Google Ads", marker_color="#34a853",
+    fig.add_trace(go.Bar(x=list(months), y=google_vals, name="Google Ads", marker_color="#34a853",
                          hovertemplate="<b>Google</b>: %{y:,.2f} €<extra></extra>"))
     fig.update_layout(
         **_CHART_BASE, barmode="group", height=300, margin=dict(l=4,r=4,t=10,b=4),
@@ -1607,6 +1618,13 @@ def main():
         st.markdown('<div style="color:#2a3050;font-size:10px;margin-top:8px">Caché: 30 min</div>',
                     unsafe_allow_html=True)
 
+        st.markdown('<hr style="border-color:#1a1e35;margin:16px 0 12px">', unsafe_allow_html=True)
+        st.markdown('<div style="color:#3a4060;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Vertical</div>',
+                    unsafe_allow_html=True)
+        _vkey = "gvf_2026" if vista == "📅 Anual 2026" else "gvf_period"
+        sel_vert_sidebar = st.selectbox("", ["🔘 Totes", "🟡 Vehicles", "🟢 Becser", "🔴 Becar", "🟠 Grup Becier"],
+                                        key=_vkey, label_visibility="collapsed")
+
     # ── Selector de período (arriba, antes del header) ─────────────────────
     if vista == "📅 Anual 2026":
         since = "2026-01-01"
@@ -1639,8 +1657,24 @@ def main():
     google_camps = google_res.get("campaigns", [])
     google_error = google_res.get("error")
 
-    # Totales combinados para el header
-    meta_spend   = meta_sum.get("spend_eur", 0) if not meta_sum.get("error") else 0
+    VERT_EMOJI = {"Vehicles":"🟡","Becser":"🟢","Becar":"🔴","Oksio":"🟠","Grup Becier":"🟠","Otros":"⚪"}
+
+    # Variables filtrades (s'aplica el filtre de vertical del sidebar just abaix)
+    f_meta_camps   = meta_camps
+    f_meta_adsets  = meta_adsets
+    f_google_camps = google_camps
+
+    # Filtre de vertical del sidebar
+    _vert_map = {"🟡 Vehicles":"Vehicles","🟢 Becser":"Becser","🔴 Becar":"Becar","🟠 Grup Becier":"Grup Becier"}
+    sel_global_vert = _vert_map.get(sel_vert_sidebar)
+
+    # Reasignar variables locales a los datos filtrados
+    meta_camps   = f_meta_camps   if not sel_global_vert else [c for c in f_meta_camps   if c.get("Vertical") == sel_global_vert]
+    meta_adsets  = f_meta_adsets  if not sel_global_vert else [a for a in f_meta_adsets  if a.get("Vertical") == sel_global_vert]
+    google_camps = f_google_camps if not sel_global_vert else [c for c in f_google_camps if c.get("Vertical") == sel_global_vert]
+
+    # Totales del período (filtrats per vertical)
+    meta_spend   = sum(c["Gasto (€)"] for c in meta_camps)   if meta_camps   else 0
     google_spend = sum(c["Gasto (€)"] for c in google_camps) if google_camps else 0
     total_spend  = meta_spend + google_spend
 
@@ -1663,18 +1697,6 @@ def main():
         unsafe_allow_html=True)
 
 
-    # ── Filtro global de vertical (en sidebar) ───────────────────────────────
-    VERT_EMOJI = {"Vehicles":"🟡","Becser":"🟢","Becar":"🔴","Oksio":"🟠","Grup Becier":"🟠","Otros":"⚪"}
-    all_verts_global = sorted({c.get("Vertical","") for c in meta_camps + google_camps if c.get("Vertical")})
-    vert_labels_global = {f'{VERT_EMOJI.get(v,"⚪")} {v}': v for v in all_verts_global}
-    with sidebar_vert_placeholder:
-        sel_vert_global_label = st.selectbox("Vertical", ["🔘 Todos"] + list(vert_labels_global.keys()), key="global_vert_filter")
-    sel_vert_global = None if sel_vert_global_label == "🔘 Todos" else vert_labels_global.get(sel_vert_global_label)
-
-    # Aplicar filtro a todos los datos
-    meta_camps_f  = meta_camps  if not sel_vert_global else [c for c in meta_camps  if c.get("Vertical") == sel_vert_global]
-    meta_adsets_f = meta_adsets if not sel_vert_global else [a for a in meta_adsets if a.get("Vertical") == sel_vert_global]
-    google_camps_f = google_camps if not sel_vert_global else [c for c in google_camps if c.get("Vertical") == sel_vert_global]
 
     # ── KPIs: dos columnas por plataforma ───────────────────────────────────
     col_meta, col_google = st.columns(2, gap="large")
@@ -1685,15 +1707,15 @@ def main():
     with col_meta:
         st.markdown(platform_header("Meta Ads", f"Cuenta Becier · {_meta_account_id()}", "meta"),
                     unsafe_allow_html=True)
-        if meta_sum.get("error") and not meta_camps_f:
+        if meta_sum.get("error") and not meta_camps:
             st.markdown(f'<p style="color:#f87171;font-size:13px">⚠ {meta_sum["error"]}</p>',
                         unsafe_allow_html=True)
         else:
             # KPIs calculados desde campañas filtradas (consistente con el filtro de vertical)
-            mf_spend = sum(c.get("Gasto (€)", 0) for c in meta_camps_f)
-            mf_imp   = sum(c.get("Impresiones", 0) for c in meta_camps_f)
-            mf_alc   = sum(c.get("Alcance", 0) for c in meta_camps_f)
-            mf_cli   = sum(c.get("Clics enlace", 0) for c in meta_camps_f)
+            mf_spend = sum(c.get("Gasto (€)", 0) for c in meta_camps)
+            mf_imp   = sum(c.get("Impresiones", 0) for c in meta_camps)
+            mf_alc   = sum(c.get("Alcance", 0) for c in meta_camps)
+            mf_cli   = sum(c.get("Clics enlace", 0) for c in meta_camps)
             mf_cpm   = round(mf_spend / mf_imp * 1000, 2) if mf_imp else 0
             mf_ctr   = round(mf_cli / mf_imp * 100, 2)   if mf_imp else 0
             mf_cpc   = round(mf_spend / mf_cli, 2)        if mf_cli else 0
@@ -1709,7 +1731,7 @@ def main():
             c6.markdown(kpi_card("CPC", fmt_eur(mf_cpc), "💶", accent=META_COLOR), unsafe_allow_html=True)
 
             by_obj: dict[str, dict] = {}
-            for c in meta_camps_f:
+            for c in meta_camps:
                 obj = c.get("Objetivo", "—")
                 if obj not in by_obj:
                     by_obj[obj] = {"spend": 0, "results": 0}
@@ -1733,11 +1755,11 @@ def main():
         if google_error:
             st.markdown(f'<p style="color:#f87171;font-size:13px">⚠ {google_error}</p>',
                         unsafe_allow_html=True)
-        elif google_camps_f:
-            google_spend = sum(c["Gasto (€)"] for c in google_camps_f)
-            total_imp  = sum(c["Impresiones"] for c in google_camps_f)
-            total_cli  = sum(c["Clics"] for c in google_camps_f)
-            total_conv = sum(c["Conversiones"] for c in google_camps_f)
+        elif google_camps:
+            google_spend = sum(c["Gasto (€)"] for c in google_camps)
+            total_imp  = sum(c["Impresiones"] for c in google_camps)
+            total_cli  = sum(c["Clics"] for c in google_camps)
+            total_conv = sum(c["Conversiones"] for c in google_camps)
             avg_ctr    = (total_cli / total_imp * 100) if total_imp else 0
             avg_cpc    = (google_spend / total_cli) if total_cli else 0
             avg_cpm    = (google_spend / total_imp * 1000) if total_imp else 0
@@ -1770,8 +1792,16 @@ def main():
         st.markdown(f'<div style="color:#5a6080;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px">{text}</div>', unsafe_allow_html=True)
 
     with col_evo:
-        chart_label("Inversión semanal — Meta vs Google")
-        if meta_daily or google_daily:
+        chart_label("Inversión mensual — Meta vs Google")
+        if sel_global_vert:
+            # Amb filtre de vertical: calcular des de campanyes filtrades
+            meta_spend_filt  = sum(c.get("Gasto (€)", 0) for c in meta_camps)
+            google_spend_filt = sum(c.get("Gasto (€)", 0) for c in google_camps)
+            _mock_meta   = [{"date": since, "spend": meta_spend_filt}]   if meta_spend_filt   else []
+            _mock_google = [{"date": since, "spend": google_spend_filt}] if google_spend_filt else []
+            st.plotly_chart(chart_inversion_semanal(_mock_meta, _mock_google),
+                            use_container_width=True, config=_NO_INTERACT)
+        elif meta_daily or google_daily:
             st.plotly_chart(chart_inversion_semanal(meta_daily, google_daily),
                             use_container_width=True, config=_NO_INTERACT)
         else:
@@ -1779,15 +1809,15 @@ def main():
 
     with col_donut:
         chart_label("Presupuesto por vertical")
-        if meta_camps_f or google_camps_f:
-            st.plotly_chart(chart_desglose_vertical(meta_camps_f, google_camps_f),
+        if meta_camps or google_camps:
+            st.plotly_chart(chart_desglose_vertical(meta_camps, google_camps),
                             use_container_width=True, config=_NO_INTERACT)
         else:
             st.markdown('<p style="color:#5a6080;font-size:13px">Sin datos.</p>', unsafe_allow_html=True)
 
     with col_cpl:
         chart_label("CPL / CPR por vertical y canal")
-        fig_cpr = chart_cpr_por_vertical_canal(meta_camps_f, google_camps_f)
+        fig_cpr = chart_cpr_por_vertical_canal(meta_camps, google_camps)
         if fig_cpr.data:
             st.plotly_chart(fig_cpr, use_container_width=True, config=_NO_INTERACT)
         else:
@@ -1802,19 +1832,19 @@ def main():
 
     with tab_meta:
         st.markdown('<div style="height:12px"></div>', unsafe_allow_html=True)
-        if sel_vert_global:
-            st.markdown(f'<div style="color:#5a6080;font-size:11px;margin-bottom:8px">Filtro activo: {sel_vert_global_label}</div>', unsafe_allow_html=True)
+        if sel_global_vert:
+            st.markdown(f'<div style="color:#5a6080;font-size:11px;margin-bottom:8px">Filtro activo: {sel_vert_sidebar}</div>', unsafe_allow_html=True)
 
-        render_meta_table(meta_camps_f)
+        render_meta_table(meta_camps)
         st.markdown('<div style="height:20px"></div>', unsafe_allow_html=True)
         st.markdown('<div style="color:#5a6080;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Por conjunto de anuncios (Adset)</div>', unsafe_allow_html=True)
-        render_meta_adsets_table(meta_adsets_f)
+        render_meta_adsets_table(meta_adsets)
 
         # ── Creatividades ──────────────────────────────────────────────────
         st.markdown('<div style="height:20px"></div>', unsafe_allow_html=True)
         st.markdown('<div style="color:#5a6080;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">Creatividades</div>', unsafe_allow_html=True)
 
-        adsets_for_creatives = meta_adsets_f if sel_vert_global else meta_adsets
+        adsets_for_creatives = meta_adsets if sel_global_vert else meta_adsets
         if adsets_for_creatives:
             camp_names = sorted({a["Campaña"] for a in adsets_for_creatives})
             col_s1, col_s2 = st.columns(2)
@@ -1865,9 +1895,9 @@ def main():
 
     with tab_google:
         st.markdown('<div style="height:12px"></div>', unsafe_allow_html=True)
-        if sel_vert_global:
-            st.markdown(f'<div style="color:#5a6080;font-size:11px;margin-bottom:8px">Filtro activo: {sel_vert_global_label}</div>', unsafe_allow_html=True)
-        render_google_table(google_camps_f)
+        if sel_global_vert:
+            st.markdown(f'<div style="color:#5a6080;font-size:11px;margin-bottom:8px">Filtro activo: {sel_vert_sidebar}</div>', unsafe_allow_html=True)
+        render_google_table(google_camps)
 
         # ── Keywords ──────────────────────────────────────────────────────
         st.markdown('<div style="height:20px"></div>', unsafe_allow_html=True)
@@ -1882,8 +1912,8 @@ def main():
             with col_fkw:
                 sel_kw_label = st.selectbox("Filtrar por vertical", ["🔘 Todos"] + list(vert_labels_kw.keys()), key="kw_vert_filter")
             sel_kw = None if sel_kw_label == "🔘 Todos" else vert_labels_kw.get(sel_kw_label)
-            filtered_kws = [k for k in kws if not sel_kw and not sel_vert_global or
-                            k.get("Vertical") == (sel_kw or sel_vert_global)]
+            filtered_kws = [k for k in kws if not sel_kw and not sel_global_vert or
+                            k.get("Vertical") == (sel_kw or sel_global_vert)]
             render_google_keywords_table(filtered_kws)
 
     # ── Footer ──────────────────────────────────────────────────────────────
