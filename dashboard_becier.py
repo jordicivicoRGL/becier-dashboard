@@ -1148,14 +1148,16 @@ function sortTable(idx,th){
   const asc=th.classList.contains('asc');
   document.querySelectorAll('th').forEach(h=>h.classList.remove('asc','desc'));
 
+  const isNum=v=>/^-?\d+(\.\d+)?$/.test(String(v).trim());
   const cmp=(a,b)=>{
     const ac=a.cells[idx]; const bc=b.cells[idx];
     if(!ac||!bc) return 0;
     const av=ac.dataset.v!==undefined?ac.dataset.v:ac.textContent.trim();
     const bv=bc.dataset.v!==undefined?bc.dataset.v:bc.textContent.trim();
-    const an=parseFloat(String(av).replace(/[^\d.-]/g,''));
-    const bn=parseFloat(String(bv).replace(/[^\d.-]/g,''));
-    if(!isNaN(an)&&!isNaN(bn)) return asc?bn-an:an-bn;
+    if(isNum(av)&&isNum(bv)){
+      const an=parseFloat(av), bn=parseFloat(bv);
+      return asc?bn-an:an-bn;
+    }
     return asc?String(bv).localeCompare(String(av),'es'):String(av).localeCompare(String(bv),'es');
   };
 
