@@ -10,9 +10,16 @@ from datetime import date, timedelta
 from pathlib import Path
 
 import streamlit as st
+import streamlit.components.v1 as components
 import plotly.graph_objects as go
 import pandas as pd
 import requests
+
+# ─── COMPONENTE: tabla de campañas Meta con clic para filtrar ────────────────
+_clickable_meta_table = components.declare_component(
+    "clickable_meta_table",
+    path=str(Path(__file__).parent / "components" / "clickable_table"),
+)
 
 # ─── PAGE CONFIG ─────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -1172,16 +1179,6 @@ function sortTable(idx,th){
   }
   th.classList.add(asc?'desc':'asc');
 }
-
-function toggleCampaign(name){
-  const url = new URL(window.top.location.href);
-  if(url.searchParams.get('campana') === name){
-    url.searchParams.delete('campana');
-  } else {
-    url.searchParams.set('campana', name);
-  }
-  window.top.location.href = url.toString();
-}
 </script>"""
 
 def _th(label: str, idx: int, num: bool = False, tip: str = "") -> str:
@@ -1197,15 +1194,14 @@ def _num_td(display: str, raw) -> str:
     return f'<td class="num" data-v="{raw}">{display}</td>'
 
 def _campaign_cell(name: str, active_campaign: str | None = None) -> str:
-    """Celda de campaña clicable: filtra Adsets/Creatividades al hacer clic; clic de nuevo quita el filtro."""
+    """Celda de campaña clicable: filtra Adsets/Creatividades al hacer clic; clic de nuevo quita el filtro.
+    El clic lo gestiona el componente `clickable_meta_table` (ver _campaign_cell + render_meta_table)."""
     is_active = bool(active_campaign) and name == active_campaign
     safe_name  = html.escape(name)
-    onclick    = html.escape(f"toggleCampaign({json.dumps(name)})", quote=True)
-    style      = "cursor:pointer;color:#6a9fff;font-weight:700;text-decoration:underline" if is_active \
-                 else "cursor:pointer;color:inherit;text-decoration:none"
+    cls        = "camp-link active" if is_active else "camp-link"
     title      = "Clic para quitar el filtro" if is_active else "Clic para filtrar Adsets y Creatividades"
     return (f'<td data-v="{safe_name}">'
-            f'<a href="javascript:void(0)" onclick="{onclick}" style="{style}" title="{title}">{safe_name}</a>'
+            f'<span class="{cls}" data-campaign="{safe_name}" title="{title}">{safe_name}</span>'
             f'</td>')
 
 def _ctr_cell(val: float) -> str:
@@ -1219,13 +1215,19 @@ _VCSS = {"Vehicles":"tv","Becar":"tb","Becser":"ts","Oksio":"tg","Grup Becier":"
 # tv=amarillo  tb=turquesa  ts=verde  tg=naranja  to=gris
 _OCSS = {"Lead Ad":"tl","Landing":"tp","Impresiones":"tr"}
 
-def render_meta_table(campaigns: list, active_campaign: str | None = None):
+def render_meta_table(campaigns: list, active_campaign: str | None = None) -> str | None:
+    """Tabla de campañas Meta. Clic en el nombre de una campaña filtra Adsets/Creatividades
+    (segundo clic lo quita) mediante el componente `clickable_meta_table`.
+    Devuelve la campaña activa tras el clic (o None si no hay filtro)."""
     if not campaigns:
         st.markdown('<p style="color:#5a6080;font-size:13px">Sin datos de campañas.</p>',
                     unsafe_allow_html=True)
-        return
+        return active_campaign
 
-    import streamlit.components.v1 as components
+    def _th_sortable(label: str, idx: int, num: bool = False, tip: str = "") -> str:
+        cls  = "num-h" if num else ""
+        dtip = f' data-tip="{tip}"' if tip else ""
+        return f'<th class="{cls}" data-idx="{idx}"{dtip}>{label}</th>'
 
     COLS = [
         {"key":"Campaña",         "label":"Campaña"},
@@ -1273,7 +1275,7 @@ def render_meta_table(campaigns: list, active_campaign: str | None = None):
              ("Impresiones","📣  Alcance / Impresiones")]
     known = {o for o,_ in ORDER}
 
-    heads = "".join(_th(c["label"], i, c.get("num", False), META_TIPS.get(c["label"],"")) for i, c in enumerate(COLS))
+    heads = "".join(_th_sortable(c["label"], i, c.get("num", False), META_TIPS.get(c["label"],"")) for i, c in enumerate(COLS))
     tbody = ""
     sections_shown = 0
     for obj_key, title in ORDER:
@@ -1311,10 +1313,11 @@ def render_meta_table(campaigns: list, active_campaign: str | None = None):
                  + _num_td(fmt_eur(t_cpr),   t_cpr or 0)
                  + '</tr>')
 
-    height = len(campaigns) * 42 + sections_shown * 44 + 56 + 44
-    components.html(f'{_TABLE_CSS}{_TABLE_JS}<div class="wrap"><table>'
-                    f'<thead><tr>{heads}</tr></thead><tbody>{tbody}{total_row}</tbody></table></div>',
-                    height=height, scrolling=True)
+    table_html = (f'<table><thead><tr>{heads}</tr></thead>'
+                  f'<tbody>{tbody}{total_row}</tbody></table>')
+    new_active = _clickable_meta_table(html=table_html, active=active_campaign,
+                                       key="meta_campaign_click", default=active_campaign)
+    return new_active
 
 def render_meta_adsets_table(adsets: list):
     if not adsets:
@@ -1611,11 +1614,9 @@ def render_google_keywords_table(keywords: list):
 def main():
     default_since, default_until = get_prev_month_range()
 
-    # Query params: permiten que el clic en una campaña (tabla Meta) filtre
-    # Adsets/Creatividades tras la recarga de página, y restauran vista/período/
-    # vertical para que ese clic no "resetee" la selección del usuario.
+    # Query params: restauran vista/período/vertical al recargar la página
+    # (p. ej. tras usar "Refrescar datos"), para no perder la selección.
     qp = st.query_params
-    campana_filter = qp.get("campana") or None
 
     period_options = {
         "Mes anterior":     _period_last_month(),
@@ -1887,9 +1888,11 @@ def main():
         # Filtro por campaña: se activa haciendo clic en el nombre de la campaña
         # en la tabla de abajo; un segundo clic sobre la misma lo quita.
         _valid_campaigns = {c["Campaña"] for c in meta_camps}
-        active_campaign = campana_filter if campana_filter in _valid_campaigns else None
+        _seed_campaign = st.session_state.get("meta_campaign_click")
+        if _seed_campaign not in _valid_campaigns:
+            _seed_campaign = None
 
-        render_meta_table(meta_camps, active_campaign)
+        active_campaign = render_meta_table(meta_camps, _seed_campaign)
         st.markdown('<div style="height:20px"></div>', unsafe_allow_html=True)
         st.markdown('<div style="color:#5a6080;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Por conjunto de anuncios (Adset)</div>', unsafe_allow_html=True)
         if active_campaign:
