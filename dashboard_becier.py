@@ -5,6 +5,7 @@ Meta Ads + Google Ads | Streamlit
 import os
 import sys
 import json
+import html
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -225,6 +226,13 @@ def _period_last_n(days: int):
 
 def get_prev_month_range():
     return _period_last_month()
+
+def fmt_date_ddmmyyyy(iso_str: str) -> str:
+    """Convierte 'AAAA-MM-DD' a 'DD-MM-AAAA' para mostrar en UI."""
+    try:
+        return date.fromisoformat(iso_str).strftime("%d-%m-%Y")
+    except (ValueError, TypeError):
+        return iso_str
 
 def month_label(since: str) -> str:
     months_es = ["","Enero","Febrero","Marzo","Abril","Mayo","Junio",
@@ -1164,6 +1172,16 @@ function sortTable(idx,th){
   }
   th.classList.add(asc?'desc':'asc');
 }
+
+function toggleCampaign(name){
+  const url = new URL(window.top.location.href);
+  if(url.searchParams.get('campana') === name){
+    url.searchParams.delete('campana');
+  } else {
+    url.searchParams.set('campana', name);
+  }
+  window.top.location.href = url.toString();
+}
 </script>"""
 
 def _th(label: str, idx: int, num: bool = False, tip: str = "") -> str:
@@ -1178,6 +1196,18 @@ def _tag_cell(text: str, css: str, raw: str = "") -> str:
 def _num_td(display: str, raw) -> str:
     return f'<td class="num" data-v="{raw}">{display}</td>'
 
+def _campaign_cell(name: str, active_campaign: str | None = None) -> str:
+    """Celda de campaña clicable: filtra Adsets/Creatividades al hacer clic; clic de nuevo quita el filtro."""
+    is_active = bool(active_campaign) and name == active_campaign
+    safe_name  = html.escape(name)
+    onclick    = html.escape(f"toggleCampaign({json.dumps(name)})", quote=True)
+    style      = "cursor:pointer;color:#6a9fff;font-weight:700;text-decoration:underline" if is_active \
+                 else "cursor:pointer;color:inherit;text-decoration:none"
+    title      = "Clic para quitar el filtro" if is_active else "Clic para filtrar Adsets y Creatividades"
+    return (f'<td data-v="{safe_name}">'
+            f'<a href="javascript:void(0)" onclick="{onclick}" style="{style}" title="{title}">{safe_name}</a>'
+            f'</td>')
+
 def _ctr_cell(val: float) -> str:
     return fmt_pct(val)
 
@@ -1189,7 +1219,7 @@ _VCSS = {"Vehicles":"tv","Becar":"tb","Becser":"ts","Oksio":"tg","Grup Becier":"
 # tv=amarillo  tb=turquesa  ts=verde  tg=naranja  to=gris
 _OCSS = {"Lead Ad":"tl","Landing":"tp","Impresiones":"tr"}
 
-def render_meta_table(campaigns: list):
+def render_meta_table(campaigns: list, active_campaign: str | None = None):
     if not campaigns:
         st.markdown('<p style="color:#5a6080;font-size:13px">Sin datos de campañas.</p>',
                     unsafe_allow_html=True)
@@ -1219,7 +1249,7 @@ def render_meta_table(campaigns: list):
         for col in COLS:
             key = col["key"]
             if key == "Campaña":
-                cells += f'<td data-v="{name}">{name}</td>'
+                cells += _campaign_cell(name, active_campaign)
             elif key == "Vertical":
                 cells += _tag_cell(vert, _VCSS.get(vert,"to"))
             elif key == "CTR (%)":
@@ -1581,6 +1611,12 @@ def render_google_keywords_table(keywords: list):
 def main():
     default_since, default_until = get_prev_month_range()
 
+    # Query params: permiten que el clic en una campaña (tabla Meta) filtre
+    # Adsets/Creatividades tras la recarga de página, y restauran vista/período/
+    # vertical para que ese clic no "resetee" la selección del usuario.
+    qp = st.query_params
+    campana_filter = qp.get("campana") or None
+
     period_options = {
         "Mes anterior":     _period_last_month(),
         "Este mes":         _period_this_month(),
@@ -1596,8 +1632,11 @@ def main():
         st.markdown('<div style="padding:16px 0 20px"><img src="https://www.becier.ad/wp-content/uploads/logo_gb_text_white_m.png" style="height:34px;object-fit:contain"><div style="font-size:11px;color:#3a4060;margin-top:6px">Performance Dashboard</div></div>',
                     unsafe_allow_html=True)
 
-        vista = st.radio("Vista", ["📊 Período", "📅 Anual 2026"],
+        _vista_opts = ["📊 Período", "📅 Anual 2026"]
+        _vista_idx  = _vista_opts.index(qp.get("vista")) if qp.get("vista") in _vista_opts else 0
+        vista = st.radio("Vista", _vista_opts, index=_vista_idx,
                          key="vista_toggle", label_visibility="collapsed")
+        st.query_params["vista"] = vista
         st.markdown('<hr style="border-color:#1a1e35;margin:16px 0">', unsafe_allow_html=True)
 
         if vista == "📅 Anual 2026":
@@ -1622,8 +1661,11 @@ def main():
         st.markdown('<div style="color:#3a4060;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Vertical</div>',
                     unsafe_allow_html=True)
         _vkey = "gvf_2026" if vista == "📅 Anual 2026" else "gvf_period"
-        sel_vert_sidebar = st.selectbox("", ["🔘 Totes", "🟡 Vehicles", "🟢 Becser", "🔴 Becar", "🟠 Grup Becier"],
+        _vert_opts = ["🔘 Totes", "🟡 Vehicles", "🟢 Becser", "🔴 Becar", "🟠 Grup Becier"]
+        _vert_idx  = _vert_opts.index(qp.get("vert")) if qp.get("vert") in _vert_opts else 0
+        sel_vert_sidebar = st.selectbox("", _vert_opts, index=_vert_idx,
                                         key=_vkey, label_visibility="collapsed")
+        st.query_params["vert"] = sel_vert_sidebar
 
     # ── Selector de período (arriba, antes del header) ─────────────────────
     if vista == "📅 Anual 2026":
@@ -1634,12 +1676,19 @@ def main():
     else:
         col_sel, col_pad = st.columns([2, 4])
         with col_sel:
-            selected = st.selectbox("📅 Período", list(period_options.keys()), index=0,
+            _period_keys = list(period_options.keys())
+            _period_idx  = _period_keys.index(qp.get("period")) if qp.get("period") in _period_keys else 0
+            selected = st.selectbox("📅 Período", _period_keys, index=_period_idx,
                                     key="period_sel")
+            st.query_params["period"] = selected
             if selected == "Rango personalizado":
+                _qp_since = qp.get("since", default_since)
+                _qp_until = qp.get("until", default_until)
                 c_d1, c_d2 = st.columns(2)
-                since = str(c_d1.date_input("Desde", value=date.fromisoformat(default_since)))
-                until = str(c_d2.date_input("Hasta", value=date.fromisoformat(default_until)))
+                since = str(c_d1.date_input("Desde", value=date.fromisoformat(_qp_since)))
+                until = str(c_d2.date_input("Hasta", value=date.fromisoformat(_qp_until)))
+                st.query_params["since"] = since
+                st.query_params["until"] = until
             else:
                 since, until = period_options[selected]
         period_label = selected if selected != "Rango personalizado" else f"{since} – {until}"
@@ -1691,7 +1740,7 @@ def main():
         f'<div style="color:#eef0ff;font-size:38px;font-weight:800;letter-spacing:-1px;line-height:1.1">{fmt_eur(total_spend)}</div>'
         f'</div>'
         f'<div style="background:#1a1e35;border:1px solid #252a48;border-radius:10px;padding:14px 22px;color:#6a7aaa;font-size:15px;font-weight:600;white-space:nowrap;line-height:1.6">'
-        f'📅 {period_label}<br><span style="font-size:12px;color:#3a4060">{since} – {until}</span></div>'
+        f'📅 {period_label}<br><span style="font-size:12px;color:#3a4060">{fmt_date_ddmmyyyy(since)} – {fmt_date_ddmmyyyy(until)}</span></div>'
         f'</div>'
         f'</div>',
         unsafe_allow_html=True)
@@ -1783,7 +1832,7 @@ def main():
 
     # ── Gráficos ────────────────────────────────────────────────────────────
     st.markdown('<hr class="divider">', unsafe_allow_html=True)
-    st.markdown(platform_header("Análisis visual", f"{since} – {until}", "combined"),
+    st.markdown(platform_header("Análisis visual", f"{fmt_date_ddmmyyyy(since)} – {fmt_date_ddmmyyyy(until)}", "combined"),
                 unsafe_allow_html=True)
 
     col_evo, col_donut, col_cpl = st.columns([5, 3, 3], gap="medium")
@@ -1835,21 +1884,30 @@ def main():
         if sel_global_vert:
             st.markdown(f'<div style="color:#5a6080;font-size:11px;margin-bottom:8px">Filtro activo: {sel_vert_sidebar}</div>', unsafe_allow_html=True)
 
-        render_meta_table(meta_camps)
+        # Filtro por campaña: se activa haciendo clic en el nombre de la campaña
+        # en la tabla de abajo; un segundo clic sobre la misma lo quita.
+        _valid_campaigns = {c["Campaña"] for c in meta_camps}
+        active_campaign = campana_filter if campana_filter in _valid_campaigns else None
+
+        render_meta_table(meta_camps, active_campaign)
         st.markdown('<div style="height:20px"></div>', unsafe_allow_html=True)
         st.markdown('<div style="color:#5a6080;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Por conjunto de anuncios (Adset)</div>', unsafe_allow_html=True)
-        render_meta_adsets_table(meta_adsets)
+        if active_campaign:
+            st.markdown(f'<div style="color:#5a6080;font-size:11px;margin-bottom:8px">Filtro activo: {html.escape(active_campaign)} · clic de nuevo en el nombre para quitarlo</div>', unsafe_allow_html=True)
+        meta_adsets_view = [a for a in meta_adsets if a["Campaña"] == active_campaign] if active_campaign else meta_adsets
+        render_meta_adsets_table(meta_adsets_view)
 
         # ── Creatividades ──────────────────────────────────────────────────
         st.markdown('<div style="height:20px"></div>', unsafe_allow_html=True)
         st.markdown('<div style="color:#5a6080;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">Creatividades</div>', unsafe_allow_html=True)
 
-        adsets_for_creatives = meta_adsets if sel_global_vert else meta_adsets
+        adsets_for_creatives = meta_adsets_view
         if adsets_for_creatives:
             camp_names = sorted({a["Campaña"] for a in adsets_for_creatives})
+            _camp_idx = camp_names.index(active_campaign) if active_campaign in camp_names else 0
             col_s1, col_s2 = st.columns(2)
             with col_s1:
-                sel_camp = st.selectbox("Campaña", camp_names, key="cr_camp")
+                sel_camp = st.selectbox("Campaña", camp_names, index=_camp_idx, key="cr_camp")
 
             # Adsets únicos de la campaña seleccionada
             seen_ids: set = set()
