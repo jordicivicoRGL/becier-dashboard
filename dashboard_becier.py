@@ -939,7 +939,7 @@ def chart_inversion_semanal(meta_daily: list, google_daily: list) -> go.Figure:
     """Barras agrupadas: inversión mensual Meta + Google."""
     def to_monthly(dl):
         if not dl:
-            return pd.DataFrame(columns=["month","spend"])
+            return pd.DataFrame(columns=["month","month_order","spend"])
         df = pd.DataFrame(dl)
         df["date"] = pd.to_datetime(df["date"])
         df["month"] = df["date"].dt.to_period("M").apply(
