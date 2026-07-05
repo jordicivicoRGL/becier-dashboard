@@ -6,6 +6,7 @@ import os
 import sys
 import json
 import html
+import calendar
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -159,6 +160,35 @@ section[data-testid="stSidebar"] { background-color: #0b0d16; border-right: 1px 
     white-space: nowrap;
 }
 
+/* ── Comparación de períodos ─────────────────────────────────────────────── */
+.cmp-strip {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    background: #0f1224;
+    border: 1px dashed #262c4d;
+    border-radius: 8px;
+    padding: 10px 16px;
+    margin: -2px 0 16px;
+}
+.cmp-strip-label {
+    color: #5a6080;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.6px;
+    white-space: nowrap;
+    margin-right: 2px;
+}
+.cmp-chip { display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 11.5px; }
+.cmp-chip-label { color: #444c70; font-weight: 600; }
+.cmp-chip-value { color: #8894c0; font-weight: 700; }
+.cmp-delta { font-weight: 700; font-size: 11px; }
+.cmp-up { color: #4fc870; }
+.cmp-down { color: #f87171; }
+.cmp-flat { color: #5a6080; }
+
 /* ── Divider ──────────────────────────────────────────────────────────────── */
 .divider { border: none; border-top: 1px solid #1a1e35; margin: 22px 0; }
 
@@ -233,6 +263,39 @@ def _period_last_n(days: int):
 
 def get_prev_month_range():
     return _period_last_month()
+
+def _shift_months(d: date, n: int) -> date:
+    """Desplaza una fecha n meses (n puede ser negativo), ajustando el día si el mes destino es más corto."""
+    month_idx = d.month - 1 + n
+    year = d.year + month_idx // 12
+    month = month_idx % 12 + 1
+    day = min(d.day, calendar.monthrange(year, month)[1])
+    return date(year, month, day)
+
+COMPARISON_OPTIONS = ["Sin comparación", "Período anterior", "Mes anterior", "Trimestre anterior", "Año anterior"]
+
+def compute_comparison_range(since_str: str, until_str: str, mode: str):
+    """Devuelve (comp_since, comp_until) según el modo de comparación, o (None, None) si no aplica."""
+    if mode not in COMPARISON_OPTIONS or mode == "Sin comparación":
+        return None, None
+    since = date.fromisoformat(since_str)
+    until = date.fromisoformat(until_str)
+    if mode == "Período anterior":
+        days = (until - since).days + 1
+        comp_until = since - timedelta(days=1)
+        comp_since = comp_until - timedelta(days=days - 1)
+    elif mode == "Mes anterior":
+        comp_since = _shift_months(since, -1)
+        comp_until = _shift_months(until, -1)
+    elif mode == "Trimestre anterior":
+        comp_since = _shift_months(since, -3)
+        comp_until = _shift_months(until, -3)
+    elif mode == "Año anterior":
+        comp_since = _shift_months(since, -12)
+        comp_until = _shift_months(until, -12)
+    else:
+        return None, None
+    return str(comp_since), str(comp_until)
 
 def fmt_date_ddmmyyyy(iso_str: str) -> str:
     """Convierte 'AAAA-MM-DD' a 'DD-MM-AAAA' para mostrar en UI."""
@@ -885,6 +948,30 @@ def platform_header(title: str, subtitle: str, platform: str) -> str:
             f'<span class="ph-icon">{i}</span>'
             f'<span class="ph-title">{title}</span>'
             f'<span class="ph-sub">{subtitle}</span></div>')
+
+def _delta_html(current, comp, invert: bool = False) -> str:
+    """Genera el badge de variación % entre el valor actual y el de comparación.
+    invert=True para métricas de coste, donde bajar es positivo."""
+    if current is None or comp is None or comp == 0:
+        return '<span class="cmp-delta cmp-flat">—</span>'
+    delta = (current - comp) / comp * 100
+    is_up = delta >= 0
+    good = is_up if not invert else not is_up
+    cls = "cmp-up" if good else "cmp-down"
+    arrow = "▲" if is_up else "▼"
+    return f'<span class="cmp-delta {cls}">{arrow} {abs(delta):.1f}%</span>'
+
+def cmp_chip(label: str, comp_display: str, current_val, comp_val, invert: bool = False) -> str:
+    delta = _delta_html(current_val, comp_val, invert)
+    return (f'<div class="cmp-chip"><span class="cmp-chip-label">{label}</span>'
+            f'<span class="cmp-chip-value">{comp_display}</span>{delta}</div>')
+
+def render_comparison_strip(chips: list, comparison_label: str):
+    st.markdown(
+        f'<div class="cmp-strip"><span class="cmp-strip-label">🔁 vs {comparison_label}</span>'
+        + "".join(chips) + '</div>',
+        unsafe_allow_html=True)
+
 
 def render_alerts(meta: dict, google_camps: list):
     alerts = []
@@ -1671,13 +1758,15 @@ def main():
         st.query_params["vert"] = sel_vert_sidebar
 
     # ── Selector de período (arriba, antes del header) ─────────────────────
+    comparison_mode = "Sin comparación"
+
     if vista == "📅 Anual 2026":
         since = "2026-01-01"
         until = str(date.today())
         period_label = "Anual 2026"
         st.markdown('<div style="height:20px"></div>', unsafe_allow_html=True)
     else:
-        col_sel, col_pad = st.columns([2, 4])
+        col_sel, col_cmp, col_pad = st.columns([2, 2, 3])
         with col_sel:
             _period_keys = list(period_options.keys())
             _period_idx  = _period_keys.index(qp.get("period")) if qp.get("period") in _period_keys else 0
@@ -1696,6 +1785,14 @@ def main():
                 since, until = period_options[selected]
         period_label = selected if selected != "Rango personalizado" else f"{since} – {until}"
 
+        with col_cmp:
+            _cmp_idx = COMPARISON_OPTIONS.index(qp.get("cmp")) if qp.get("cmp") in COMPARISON_OPTIONS else 0
+            comparison_mode = st.selectbox("🔁 Comparar con", COMPARISON_OPTIONS, index=_cmp_idx,
+                                           key="cmp_sel")
+            st.query_params["cmp"] = comparison_mode
+
+    comp_since, comp_until = compute_comparison_range(since, until, comparison_mode)
+
     # ── Fetch ──────────────────────────────────────────────────────────────
     with st.spinner("Cargando datos…"):
         meta_sum     = fetch_meta_summary(since, until)
@@ -1708,6 +1805,15 @@ def main():
 
     google_camps = google_res.get("campaigns", [])
     google_error = google_res.get("error")
+
+    # Datos del período de comparación (si el usuario ha elegido comparar)
+    if comp_since:
+        with st.spinner("Cargando comparación…"):
+            meta_camps_cmp = fetch_meta_campaigns(comp_since, comp_until)
+            google_camps_cmp = fetch_google_campaigns(comp_since, comp_until).get("campaigns", [])
+    else:
+        meta_camps_cmp = []
+        google_camps_cmp = []
 
     VERT_EMOJI = {"Vehicles":"🟡","Becser":"🟢","Becar":"🔴","Oksio":"🟠","Grup Becier":"🟠","Otros":"⚪"}
 
@@ -1724,6 +1830,10 @@ def main():
     meta_camps   = f_meta_camps   if not sel_global_vert else [c for c in f_meta_camps   if c.get("Vertical") == sel_global_vert]
     meta_adsets  = f_meta_adsets  if not sel_global_vert else [a for a in f_meta_adsets  if a.get("Vertical") == sel_global_vert]
     google_camps = f_google_camps if not sel_global_vert else [c for c in f_google_camps if c.get("Vertical") == sel_global_vert]
+
+    if sel_global_vert:
+        meta_camps_cmp   = [c for c in meta_camps_cmp   if c.get("Vertical") == sel_global_vert]
+        google_camps_cmp = [c for c in google_camps_cmp if c.get("Vertical") == sel_global_vert]
 
     # Totales del período (filtrats per vertical)
     meta_spend   = sum(c["Gasto (€)"] for c in meta_camps)   if meta_camps   else 0
@@ -1801,6 +1911,37 @@ def main():
             r3c.markdown(kpi_card("Result. landing", fmt_num(d_land["results"]), "🌐", accent=META_COLOR), unsafe_allow_html=True)
             r3d.markdown(kpi_card("CPR landing",     fmt_eur(cpr),               "💡", accent=META_COLOR), unsafe_allow_html=True)
 
+            if comp_since:
+                cmf_spend = sum(c.get("Gasto (€)", 0) for c in meta_camps_cmp)
+                cmf_imp   = sum(c.get("Impresiones", 0) for c in meta_camps_cmp)
+                cmf_alc   = sum(c.get("Alcance", 0) for c in meta_camps_cmp)
+                cmf_cli   = sum(c.get("Clics enlace", 0) for c in meta_camps_cmp)
+                cmf_cpm   = round(cmf_spend / cmf_imp * 1000, 2) if cmf_imp else 0
+                cmf_ctr   = round(cmf_cli / cmf_imp * 100, 2)   if cmf_imp else 0
+                cmf_cpc   = round(cmf_spend / cmf_cli, 2)        if cmf_cli else 0
+
+                by_obj_cmp: dict[str, dict] = {}
+                for c in meta_camps_cmp:
+                    obj = c.get("Objetivo", "—")
+                    by_obj_cmp.setdefault(obj, {"spend": 0, "results": 0})
+                    by_obj_cmp[obj]["spend"]   += c.get("Gasto (€)", 0)
+                    by_obj_cmp[obj]["results"] += c.get("Resultado", 0)
+                d_lead_cmp = by_obj_cmp.get("Lead Ad", {"spend": 0, "results": 0})
+                d_land_cmp = by_obj_cmp.get("Landing",  {"spend": 0, "results": 0})
+                cpl_cmp = round(d_lead_cmp["spend"] / d_lead_cmp["results"], 2) if d_lead_cmp["results"] > 0 else None
+                cpr_cmp = round(d_land_cmp["spend"] / d_land_cmp["results"], 2) if d_land_cmp["results"] > 0 else None
+
+                render_comparison_strip([
+                    cmp_chip("Gasto",   fmt_eur(cmf_spend), mf_spend, cmf_spend),
+                    cmp_chip("Alcance", fmt_num(cmf_alc),   mf_alc,   cmf_alc),
+                    cmp_chip("Impr.",   fmt_num(cmf_imp),   mf_imp,   cmf_imp),
+                    cmp_chip("CPM",     fmt_eur(cmf_cpm),   mf_cpm,   cmf_cpm, invert=True),
+                    cmp_chip("CTR",     fmt_pct(cmf_ctr),   mf_ctr,   cmf_ctr),
+                    cmp_chip("CPC",     fmt_eur(cmf_cpc),   mf_cpc,   cmf_cpc, invert=True),
+                    cmp_chip("Leads",   fmt_num(d_lead_cmp["results"]), d_lead["results"], d_lead_cmp["results"]),
+                    cmp_chip("CPL",     fmt_eur(cpl_cmp),   cpl,      cpl_cmp, invert=True),
+                ], comparison_mode)
+
     with col_google:
         st.markdown(platform_header("Google Ads", "Cuenta Becier · 1632468817", "google"),
                     unsafe_allow_html=True)
@@ -1829,6 +1970,25 @@ def main():
 
             c7, _, _ = st.columns(3)
             c7.markdown(kpi_card("Coste / conv.", fmt_eur(cost_conv), "💡", accent=GOOGLE_COLOR), unsafe_allow_html=True)
+
+            if comp_since:
+                cg_spend = sum(c["Gasto (€)"] for c in google_camps_cmp)
+                cg_imp   = sum(c["Impresiones"] for c in google_camps_cmp)
+                cg_cli   = sum(c["Clics"] for c in google_camps_cmp)
+                cg_conv  = sum(c["Conversiones"] for c in google_camps_cmp)
+                cg_ctr   = (cg_cli / cg_imp * 100) if cg_imp else 0
+                cg_cpc   = (cg_spend / cg_cli) if cg_cli else 0
+                cg_cpa   = (cg_spend / cg_conv) if cg_conv else None
+
+                render_comparison_strip([
+                    cmp_chip("Gasto",       fmt_eur(cg_spend), google_spend, cg_spend),
+                    cmp_chip("Clics",       fmt_num(cg_cli),   total_cli,    cg_cli),
+                    cmp_chip("Impr.",       fmt_num(cg_imp),   total_imp,    cg_imp),
+                    cmp_chip("CTR",         fmt_pct(cg_ctr),   avg_ctr,      cg_ctr),
+                    cmp_chip("CPC",         fmt_eur(cg_cpc),   avg_cpc,      cg_cpc, invert=True),
+                    cmp_chip("Conv.",       f"{cg_conv:.0f}",  total_conv,   cg_conv),
+                    cmp_chip("Coste/conv.", fmt_eur(cg_cpa),   cost_conv,    cg_cpa, invert=True),
+                ], comparison_mode)
         else:
             st.markdown('<p style="color:#5a6080;font-size:13px">Sin datos de Google Ads para el período.</p>',
                         unsafe_allow_html=True)
