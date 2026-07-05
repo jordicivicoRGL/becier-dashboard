@@ -90,6 +90,9 @@ section[data-testid="stSidebar"] { background-color: #0b0d16; border-right: 1px 
     letter-spacing: -0.5px;
 }
 .kpi-sub { color: #444c70; font-size: 10.5px; margin-top: 5px; }
+.kpi-delta { font-size: 10.5px; margin-top: 6px; font-weight: 700; }
+.kpi-delta-value { color: #8894c0; font-weight: 700; }
+.kpi-delta-label { color: #444c70; font-weight: 500; margin-left: 3px; }
 
 /* ── Platform containers ──────────────────────────────────────────────────── */
 .platform-header {
@@ -161,29 +164,6 @@ section[data-testid="stSidebar"] { background-color: #0b0d16; border-right: 1px 
 }
 
 /* ── Comparación de períodos ─────────────────────────────────────────────── */
-.cmp-strip {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 16px;
-    background: #0f1224;
-    border: 1px dashed #262c4d;
-    border-radius: 8px;
-    padding: 10px 16px;
-    margin: -2px 0 16px;
-}
-.cmp-strip-label {
-    color: #5a6080;
-    font-weight: 700;
-    text-transform: uppercase;
-    font-size: 10px;
-    letter-spacing: 0.6px;
-    white-space: nowrap;
-    margin-right: 2px;
-}
-.cmp-chip { display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 11.5px; }
-.cmp-chip-label { color: #444c70; font-weight: 600; }
-.cmp-chip-value { color: #8894c0; font-weight: 700; }
 .cmp-delta { font-weight: 700; font-size: 11px; }
 .cmp-up { color: #4fc870; }
 .cmp-down { color: #f87171; }
@@ -932,12 +912,12 @@ def fmt_pct(v) -> str:
 
 # ─── COMPONENTES UI ───────────────────────────────────────────────────────────
 def kpi_card(label: str, value: str, icon: str = "", sub: str = "",
-             accent: str = "#1e2440") -> str:
+             accent: str = "#1e2440", delta: str = "") -> str:
     icon_html = f'<span class="kpi-icon">{icon}</span>' if icon else ""
     sub_html  = f'<div class="kpi-sub">{sub}</div>' if sub else ""
     return (f'<div class="kpi-card" style="border-top:2px solid {accent}">'
             f'{icon_html}<div class="kpi-label">{label}</div>'
-            f'<div class="kpi-value">{value}</div>{sub_html}</div>')
+            f'<div class="kpi-value">{value}</div>{sub_html}{delta}</div>')
 
 def platform_header(title: str, subtitle: str, platform: str) -> str:
     icons = {"meta": "📘", "google": "📗", "combined": "📊"}
@@ -961,16 +941,11 @@ def _delta_html(current, comp, invert: bool = False) -> str:
     arrow = "▲" if is_up else "▼"
     return f'<span class="cmp-delta {cls}">{arrow} {abs(delta):.1f}%</span>'
 
-def cmp_chip(label: str, comp_display: str, current_val, comp_val, invert: bool = False) -> str:
+def kpi_delta(comp_display: str, current_val, comp_val, comparison_label: str, invert: bool = False) -> str:
+    """Línea pequeña para insertar dentro de una kpi-card: valor del período de comparación + flecha %."""
     delta = _delta_html(current_val, comp_val, invert)
-    return (f'<div class="cmp-chip"><span class="cmp-chip-label">{label}</span>'
-            f'<span class="cmp-chip-value">{comp_display}</span>{delta}</div>')
-
-def render_comparison_strip(chips: list, comparison_label: str):
-    st.markdown(
-        f'<div class="cmp-strip"><span class="cmp-strip-label">🔁 vs {comparison_label}</span>'
-        + "".join(chips) + '</div>',
-        unsafe_allow_html=True)
+    return (f'<div class="kpi-delta"><span class="kpi-delta-value">{comp_display}</span> {delta}'
+            f'<span class="kpi-delta-label">vs {comparison_label}</span></div>')
 
 
 def render_alerts(meta: dict, google_camps: list):
@@ -1217,6 +1192,8 @@ tr.sec-hdr td{background:#161d32;color:#5a6898;font-size:10px;font-weight:700;
 tr.sec-hdr:first-child td{border-top:none}
 tr.total-row td{background:#0f1628;color:#eef0ff;font-weight:700;font-size:12.5px;
   border-top:2px solid #2e3560;white-space:nowrap}
+tr.cmp-row td{background:#10142a;color:#5a6080;font-size:11.5px;border-bottom:1px solid #161930}
+tr.cmp-row td:first-child{padding-left:26px;font-weight:600;color:#5a6080;text-align:left}
 th{position:relative}
 th[data-tip]:hover::after{content:attr(data-tip);position:absolute;top:calc(100% + 6px);
   left:50%;transform:translateX(-50%);background:#1c2040;color:#c8d0f0;
@@ -1248,10 +1225,20 @@ function sortTable(idx,th){
     return asc?String(bv).localeCompare(String(av),'es'):String(av).localeCompare(String(bv),'es');
   };
 
+  const groupRows=rows=>{
+    const items=[];
+    rows.forEach(r=>{
+      if(r.dataset.cmp && items.length) items[items.length-1].cmpRows.push(r);
+      else items.push({main:r,cmpRows:[]});
+    });
+    return items;
+  };
+
   const hasSec=allRows.some(r=>r.dataset.sec);
   if(!hasSec){
-    allRows.sort(cmp);
-    allRows.forEach(r=>tb.appendChild(r));
+    const items=groupRows(allRows);
+    items.sort((a,b)=>cmp(a.main,b.main));
+    items.forEach(it=>{ tb.appendChild(it.main); it.cmpRows.forEach(r=>tb.appendChild(r)); });
   } else {
     const secs=[];
     let cur={hdr:null,rows:[]};
@@ -1261,9 +1248,10 @@ function sortTable(idx,th){
     });
     secs.push(cur);
     secs.forEach(s=>{
-      s.rows.sort(cmp);
+      const items=groupRows(s.rows);
+      items.sort((a,b)=>cmp(a.main,b.main));
       if(s.hdr) tb.appendChild(s.hdr);
-      s.rows.forEach(r=>tb.appendChild(r));
+      items.forEach(it=>{ tb.appendChild(it.main); it.cmpRows.forEach(r=>tb.appendChild(r)); });
     });
   }
   th.classList.add(asc?'desc':'asc');
@@ -1304,14 +1292,19 @@ _VCSS = {"Vehicles":"tv","Becar":"tb","Becser":"ts","Oksio":"tg","Grup Becier":"
 # tv=amarillo  tb=turquesa  ts=verde  tg=naranja  to=gris
 _OCSS = {"Lead Ad":"tl","Landing":"tp","Impresiones":"tr"}
 
-def render_meta_table(campaigns: list, active_campaign: str | None = None) -> str | None:
+def render_meta_table(campaigns: list, active_campaign: str | None = None,
+                       campaigns_cmp: list | None = None, comparison_label: str | None = None) -> str | None:
     """Tabla de campañas Meta. Clic en el nombre de una campaña filtra Adsets/Creatividades
     (segundo clic lo quita) mediante el componente `clickable_meta_table`.
+    Si se pasa campaigns_cmp, cada fila de campaña añade debajo una fila de comparación
+    con las métricas del período de comparación (misma campaña, por _campaign_id).
     Devuelve la campaña activa tras el clic (o None si no hay filtro)."""
     if not campaigns:
         st.markdown('<p style="color:#5a6080;font-size:13px">Sin datos de campañas.</p>',
                     unsafe_allow_html=True)
         return active_campaign
+
+    cmp_by_id = {c.get("_campaign_id"): c for c in (campaigns_cmp or []) if c.get("_campaign_id")}
 
     def _th_sortable(label: str, idx: int, num: bool = False, tip: str = "") -> str:
         cls  = "num-h" if num else ""
@@ -1355,6 +1348,31 @@ def render_meta_table(campaigns: list, active_campaign: str | None = None) -> st
                 cells += f'<td>{c.get(key,"—")}</td>'
         return f"<tr>{cells}</tr>"
 
+    def make_cmp_row(comp_c):
+        cells = ""
+        for col in COLS:
+            key = col["key"]
+            if key == "Campaña":
+                cells += f'<td data-cmp="1">↳ vs {comparison_label}</td>'
+            elif key == "Vertical":
+                cells += '<td></td>'
+            elif key == "CTR (%)":
+                cells += f'<td class="num">{_ctr_cell(comp_c.get(key,0))}</td>'
+            elif col.get("eur"):
+                cells += f'<td class="num">{fmt_eur(comp_c.get(key))}</td>'
+            elif col.get("num"):
+                cells += f'<td class="num">{fmt_num(comp_c.get(key))}</td>'
+            else:
+                cells += f'<td>{comp_c.get(key,"—")}</td>'
+        return f'<tr class="cmp-row" data-cmp="1">{cells}</tr>'
+
+    def make_row_with_cmp(c):
+        row = make_row(c)
+        comp_c = cmp_by_id.get(c.get("_campaign_id")) if campaigns_cmp else None
+        if comp_c:
+            row += make_cmp_row(comp_c)
+        return row
+
     by_obj: dict[str, list] = {}
     for c in campaigns:
         by_obj.setdefault(c.get("Objetivo","—"), []).append(c)
@@ -1372,12 +1390,12 @@ def render_meta_table(campaigns: list, active_campaign: str | None = None) -> st
         if not camps:
             continue
         tbody += f'<tr class="sec-hdr" data-sec="1"><td colspan="{ncols}">{title}</td></tr>'
-        tbody += "".join(make_row(c) for c in camps)
+        tbody += "".join(make_row_with_cmp(c) for c in camps)
         sections_shown += 1
     for obj_key, camps in by_obj.items():
         if obj_key not in known and camps:
             tbody += f'<tr class="sec-hdr" data-sec="1"><td colspan="{ncols}">📌  Otros — {obj_key}</td></tr>'
-            tbody += "".join(make_row(c) for c in camps)
+            tbody += "".join(make_row_with_cmp(c) for c in camps)
             sections_shown += 1
 
     # Fila TOTAL Meta
@@ -1402,13 +1420,36 @@ def render_meta_table(campaigns: list, active_campaign: str | None = None) -> st
                  + _num_td(fmt_eur(t_cpr),   t_cpr or 0)
                  + '</tr>')
 
+    total_cmp_row = ""
+    if campaigns_cmp:
+        ct_spend = sum(c["Gasto (€)"] for c in campaigns_cmp)
+        ct_imp   = sum(c["Impresiones"] for c in campaigns_cmp)
+        ct_alc   = sum(c["Alcance"] for c in campaigns_cmp)
+        ct_cli   = sum(c.get("Clics enlace", 0) for c in campaigns_cmp)
+        ct_res   = sum(c.get("Resultado", 0) for c in campaigns_cmp)
+        ct_cpm   = round(ct_spend / ct_imp * 1000, 2) if ct_imp else 0
+        ct_cpc   = round(ct_spend / ct_cli, 2)         if ct_cli else 0
+        ct_ctr   = round(ct_cli / ct_imp * 100, 2)     if ct_imp else 0
+        ct_cpr   = round(ct_spend / ct_res, 2)          if ct_res else None
+        total_cmp_row = (f'<tr class="cmp-row" data-cmp="1"><td>↳ vs {comparison_label}</td><td></td>'
+                     + f'<td class="num">{fmt_eur(ct_spend)}</td>'
+                     + f'<td class="num">{fmt_num(ct_imp)}</td>'
+                     + f'<td class="num">{fmt_num(ct_alc)}</td>'
+                     + f'<td class="num">{fmt_eur(ct_cpm)}</td>'
+                     + f'<td class="num">{fmt_eur(ct_cpc)}</td>'
+                     + f'<td class="num">{fmt_pct(ct_ctr)}</td>'
+                     + f'<td class="num">{fmt_num(ct_cli)}</td>'
+                     + f'<td class="num">{fmt_num(ct_res)}</td>'
+                     + f'<td class="num">{fmt_eur(ct_cpr)}</td>'
+                     + '</tr>')
+
     table_html = (f'<table><thead><tr>{heads}</tr></thead>'
-                  f'<tbody>{tbody}{total_row}</tbody></table>')
+                  f'<tbody>{tbody}{total_row}{total_cmp_row}</tbody></table>')
     new_active = _clickable_meta_table(html=table_html, active=active_campaign,
                                        key="meta_campaign_click", default=active_campaign)
     return new_active
 
-def render_meta_adsets_table(adsets: list):
+def render_meta_adsets_table(adsets: list, adsets_cmp: list | None = None, comparison_label: str | None = None):
     if not adsets:
         st.markdown('<p style="color:#5a6080;font-size:13px">Sin datos de adsets.</p>',
                     unsafe_allow_html=True)
@@ -1431,8 +1472,11 @@ def render_meta_adsets_table(adsets: list):
         {"key":"Coste/Resultado", "label":"CPR",                 "num":True,"eur":True},
     ]
 
+    cmp_by_id = {a.get("_adset_id"): a for a in (adsets_cmp or []) if a.get("_adset_id")}
+
     heads = "".join(_th(c["label"], i, c.get("num", False), META_TIPS.get(c["label"],"")) for i, c in enumerate(COLS))
     rows = ""
+    n_cmp_rows = 0
     for c in adsets:
         name  = c["Campaña"];  sname  = (name[:30]+"…")  if len(name)>32  else name
         adset = c["Adset"];    sadset = (adset[:30]+"…") if len(adset)>32 else adset
@@ -1456,7 +1500,29 @@ def render_meta_adsets_table(adsets: list):
                 cells += f'<td>{c.get(key,"—")}</td>'
         rows += f"<tr>{cells}</tr>"
 
-    height = len(adsets) * 42 + 56
+        comp_c = cmp_by_id.get(c.get("_adset_id")) if adsets_cmp else None
+        if comp_c:
+            cmp_cells = ""
+            for col in COLS:
+                key = col["key"]
+                if key == "Campaña":
+                    cmp_cells += f'<td data-cmp="1">↳ vs {comparison_label}</td>'
+                elif key == "Adset":
+                    cmp_cells += '<td></td>'
+                elif key == "Vertical":
+                    cmp_cells += '<td></td>'
+                elif key == "CTR (%)":
+                    cmp_cells += f'<td class="num">{fmt_pct(comp_c.get(key,0))}</td>'
+                elif col.get("eur"):
+                    cmp_cells += f'<td class="num">{fmt_eur(comp_c.get(key))}</td>'
+                elif col.get("num"):
+                    cmp_cells += f'<td class="num">{fmt_num(comp_c.get(key))}</td>'
+                else:
+                    cmp_cells += f'<td>{comp_c.get(key,"—")}</td>'
+            rows += f'<tr class="cmp-row" data-cmp="1">{cmp_cells}</tr>'
+            n_cmp_rows += 1
+
+    height = len(adsets) * 42 + n_cmp_rows * 38 + 56
     components.html(f'{_TABLE_CSS}{_TABLE_JS}<div class="wrap"><table>'
                     f'<thead><tr>{heads}</tr></thead><tbody>{rows}</tbody></table></div>',
                     height=height, scrolling=True)
@@ -1529,7 +1595,8 @@ def render_creatives_table(ads: list):
                     height=height, scrolling=True)
 
 
-def render_google_table(campaigns: list):
+def render_google_table(campaigns: list, campaigns_cmp: list | None = None,
+                         comparison_label: str | None = None):
     if not campaigns:
         st.markdown('<p style="color:#5a6080;font-size:13px">Sin datos de campañas.</p>',
                     unsafe_allow_html=True)
@@ -1541,6 +1608,8 @@ def render_google_table(campaigns: list):
     VERT_ICONS = {"Vehicles":"🟡","Becser":"🟢","Becar":"🔵",
                   "Oksio":"🟠","Grup Becier":"🟠","Otros":"⚪"}
     ncols = 9
+
+    cmp_by_name = {c["Campaña"]: c for c in (campaigns_cmp or [])}
 
     heads = (_th("Campaña",0)
              + _th("Coste",1,True,       "Importe total invertido")
@@ -1565,12 +1634,32 @@ def render_google_table(campaigns: list):
                 + _num_td(fmt_eur(c["Coste/conv."]),   c["Coste/conv."] or 0)
                 + '</tr>')
 
+    def make_cmp_row(comp_c):
+        return (f'<tr class="cmp-row" data-cmp="1"><td>↳ vs {comparison_label}</td>'
+                + f'<td class="num">{fmt_eur(comp_c["Gasto (€)"])}</td>'
+                + f'<td class="num">{fmt_num(comp_c["Impresiones"])}</td>'
+                + f'<td class="num">{fmt_eur(comp_c["CPM (€)"])}</td>'
+                + f'<td class="num">{fmt_eur(comp_c["CPC (€)"])}</td>'
+                + f'<td class="num">{fmt_num(comp_c["Clics"])}</td>'
+                + f'<td class="num">{fmt_pct(comp_c["CTR (%)"])}</td>'
+                + f'<td class="num">{int(comp_c["Conversiones"])}</td>'
+                + f'<td class="num">{fmt_eur(comp_c["Coste/conv."])}</td>'
+                + '</tr>')
+
+    def make_row_with_cmp(c):
+        row = make_row(c)
+        comp_c = cmp_by_name.get(c["Campaña"]) if campaigns_cmp else None
+        if comp_c:
+            row += make_cmp_row(comp_c)
+        return row
+
     by_vert: dict[str, list] = {}
     for c in campaigns:
         by_vert.setdefault(c.get("Vertical","Otros"), []).append(c)
 
     tbody = ""
     n_sections = 0
+    n_cmp_rows = 0
     for vert in VERT_ORDER:
         camps = by_vert.get(vert, [])
         if not camps:
@@ -1578,13 +1667,15 @@ def render_google_table(campaigns: list):
         icon = VERT_ICONS.get(vert,"⚪")
         tbody += (f'<tr class="sec-hdr" data-sec="1">'
                   f'<td colspan="{ncols}">{icon}  {vert}</td></tr>')
-        tbody += "".join(make_row(c) for c in camps)
+        tbody += "".join(make_row_with_cmp(c) for c in camps)
+        n_cmp_rows += sum(1 for c in camps if cmp_by_name.get(c["Campaña"]))
         n_sections += 1
     for vert, camps in by_vert.items():
         if vert not in VERT_ORDER and camps:
             tbody += (f'<tr class="sec-hdr" data-sec="1">'
                       f'<td colspan="{ncols}">⚪  {vert}</td></tr>')
-            tbody += "".join(make_row(c) for c in camps)
+            tbody += "".join(make_row_with_cmp(c) for c in camps)
+            n_cmp_rows += sum(1 for c in camps if cmp_by_name.get(c["Campaña"]))
             n_sections += 1
 
     # Fila TOTAL Google
@@ -1607,9 +1698,31 @@ def render_google_table(campaigns: list):
                  + _num_td(fmt_eur(g_cpa),   g_cpa or 0)
                  + '</tr>')
 
-    height = len(campaigns) * 42 + n_sections * 44 + 56 + 44
+    total_cmp_row = ""
+    if campaigns_cmp:
+        gt_spend = sum(c["Gasto (€)"] for c in campaigns_cmp)
+        gt_imp   = sum(c["Impresiones"] for c in campaigns_cmp)
+        gt_cli   = sum(c["Clics"] for c in campaigns_cmp)
+        gt_conv  = sum(c["Conversiones"] for c in campaigns_cmp)
+        gt_cpm   = round(gt_spend / gt_imp * 1000, 2) if gt_imp else 0
+        gt_cpc   = round(gt_spend / gt_cli, 2)         if gt_cli else 0
+        gt_ctr   = round(gt_cli / gt_imp * 100, 2)     if gt_imp else 0
+        gt_cpa   = round(gt_spend / gt_conv, 2)         if gt_conv else None
+        total_cmp_row = (f'<tr class="cmp-row" data-cmp="1"><td>↳ vs {comparison_label}</td>'
+                     + f'<td class="num">{fmt_eur(gt_spend)}</td>'
+                     + f'<td class="num">{fmt_num(gt_imp)}</td>'
+                     + f'<td class="num">{fmt_eur(gt_cpm)}</td>'
+                     + f'<td class="num">{fmt_eur(gt_cpc)}</td>'
+                     + f'<td class="num">{fmt_num(gt_cli)}</td>'
+                     + f'<td class="num">{fmt_pct(gt_ctr)}</td>'
+                     + f'<td class="num">{int(gt_conv)}</td>'
+                     + f'<td class="num">{fmt_eur(gt_cpa)}</td>'
+                     + '</tr>')
+        n_cmp_rows += 1
+
+    height = len(campaigns) * 42 + n_cmp_rows * 38 + n_sections * 44 + 56 + 44
     components.html(f'{_TABLE_CSS}{_TABLE_JS}<div class="wrap"><table>'
-                    f'<thead><tr>{heads}</tr></thead><tbody>{tbody}{total_row}</tbody></table></div>',
+                    f'<thead><tr>{heads}</tr></thead><tbody>{tbody}{total_row}{total_cmp_row}</tbody></table></div>',
                     height=height, scrolling=True)
 
 
@@ -1810,9 +1923,11 @@ def main():
     if comp_since:
         with st.spinner("Cargando comparación…"):
             meta_camps_cmp = fetch_meta_campaigns(comp_since, comp_until)
+            meta_adsets_cmp = fetch_meta_adsets_detail(comp_since, comp_until)
             google_camps_cmp = fetch_google_campaigns(comp_since, comp_until).get("campaigns", [])
     else:
         meta_camps_cmp = []
+        meta_adsets_cmp = []
         google_camps_cmp = []
 
     VERT_EMOJI = {"Vehicles":"🟡","Becser":"🟢","Becar":"🔴","Oksio":"🟠","Grup Becier":"🟠","Otros":"⚪"}
@@ -1833,6 +1948,7 @@ def main():
 
     if sel_global_vert:
         meta_camps_cmp   = [c for c in meta_camps_cmp   if c.get("Vertical") == sel_global_vert]
+        meta_adsets_cmp  = [a for a in meta_adsets_cmp  if a.get("Vertical") == sel_global_vert]
         google_camps_cmp = [c for c in google_camps_cmp if c.get("Vertical") == sel_global_vert]
 
     # Totales del período (filtrats per vertical)
@@ -1882,16 +1998,6 @@ def main():
             mf_ctr   = round(mf_cli / mf_imp * 100, 2)   if mf_imp else 0
             mf_cpc   = round(mf_spend / mf_cli, 2)        if mf_cli else 0
 
-            c1, c2, c3 = st.columns(3)
-            c1.markdown(kpi_card("Gasto total", fmt_eur(mf_spend), "💰", accent=META_COLOR), unsafe_allow_html=True)
-            c2.markdown(kpi_card("Alcance", fmt_num(mf_alc), "👁️", accent=META_COLOR), unsafe_allow_html=True)
-            c3.markdown(kpi_card("Impresiones", fmt_num(mf_imp), "📊", accent=META_COLOR), unsafe_allow_html=True)
-
-            c4, c5, c6 = st.columns(3)
-            c4.markdown(kpi_card("CPM", fmt_eur(mf_cpm), "📈", accent=META_COLOR), unsafe_allow_html=True)
-            c5.markdown(kpi_card("CTR", fmt_pct(mf_ctr), "🖱️", accent=META_COLOR), unsafe_allow_html=True)
-            c6.markdown(kpi_card("CPC", fmt_eur(mf_cpc), "💶", accent=META_COLOR), unsafe_allow_html=True)
-
             by_obj: dict[str, dict] = {}
             for c in meta_camps:
                 obj = c.get("Objetivo", "—")
@@ -1905,12 +2011,9 @@ def main():
             cpl = round(d_lead["spend"] / d_lead["results"], 2) if d_lead["results"] > 0 else None
             cpr = round(d_land["spend"] / d_land["results"], 2) if d_land["results"] > 0 else None
 
-            r3a, r3b, r3c, r3d = st.columns(4)
-            r3a.markdown(kpi_card("Leads",           fmt_num(d_lead["results"]), "🎯", accent=META_COLOR), unsafe_allow_html=True)
-            r3b.markdown(kpi_card("CPL",             fmt_eur(cpl),               "💡", accent=META_COLOR), unsafe_allow_html=True)
-            r3c.markdown(kpi_card("Result. landing", fmt_num(d_land["results"]), "🌐", accent=META_COLOR), unsafe_allow_html=True)
-            r3d.markdown(kpi_card("CPR landing",     fmt_eur(cpr),               "💡", accent=META_COLOR), unsafe_allow_html=True)
-
+            # Métricas del período de comparación (si aplica) — se calculan antes para inyectar el delta en cada tarjeta
+            d_mf_spend = d_mf_alc = d_mf_imp = d_mf_cpm = d_mf_ctr = d_mf_cpc = ""
+            d_leads = d_cpl = d_land_res = d_cpr = ""
             if comp_since:
                 cmf_spend = sum(c.get("Gasto (€)", 0) for c in meta_camps_cmp)
                 cmf_imp   = sum(c.get("Impresiones", 0) for c in meta_camps_cmp)
@@ -1931,16 +2034,32 @@ def main():
                 cpl_cmp = round(d_lead_cmp["spend"] / d_lead_cmp["results"], 2) if d_lead_cmp["results"] > 0 else None
                 cpr_cmp = round(d_land_cmp["spend"] / d_land_cmp["results"], 2) if d_land_cmp["results"] > 0 else None
 
-                render_comparison_strip([
-                    cmp_chip("Gasto",   fmt_eur(cmf_spend), mf_spend, cmf_spend),
-                    cmp_chip("Alcance", fmt_num(cmf_alc),   mf_alc,   cmf_alc),
-                    cmp_chip("Impr.",   fmt_num(cmf_imp),   mf_imp,   cmf_imp),
-                    cmp_chip("CPM",     fmt_eur(cmf_cpm),   mf_cpm,   cmf_cpm, invert=True),
-                    cmp_chip("CTR",     fmt_pct(cmf_ctr),   mf_ctr,   cmf_ctr),
-                    cmp_chip("CPC",     fmt_eur(cmf_cpc),   mf_cpc,   cmf_cpc, invert=True),
-                    cmp_chip("Leads",   fmt_num(d_lead_cmp["results"]), d_lead["results"], d_lead_cmp["results"]),
-                    cmp_chip("CPL",     fmt_eur(cpl_cmp),   cpl,      cpl_cmp, invert=True),
-                ], comparison_mode)
+                d_mf_spend = kpi_delta(fmt_eur(cmf_spend), mf_spend, cmf_spend, comparison_mode)
+                d_mf_alc   = kpi_delta(fmt_num(cmf_alc),   mf_alc,   cmf_alc,   comparison_mode)
+                d_mf_imp   = kpi_delta(fmt_num(cmf_imp),   mf_imp,   cmf_imp,   comparison_mode)
+                d_mf_cpm   = kpi_delta(fmt_eur(cmf_cpm),   mf_cpm,   cmf_cpm,   comparison_mode, invert=True)
+                d_mf_ctr   = kpi_delta(fmt_pct(cmf_ctr),   mf_ctr,   cmf_ctr,   comparison_mode)
+                d_mf_cpc   = kpi_delta(fmt_eur(cmf_cpc),   mf_cpc,   cmf_cpc,   comparison_mode, invert=True)
+                d_leads    = kpi_delta(fmt_num(d_lead_cmp["results"]), d_lead["results"], d_lead_cmp["results"], comparison_mode)
+                d_cpl      = kpi_delta(fmt_eur(cpl_cmp),   cpl, cpl_cmp, comparison_mode, invert=True)
+                d_land_res = kpi_delta(fmt_num(d_land_cmp["results"]), d_land["results"], d_land_cmp["results"], comparison_mode)
+                d_cpr      = kpi_delta(fmt_eur(cpr_cmp),   cpr, cpr_cmp, comparison_mode, invert=True)
+
+            c1, c2, c3 = st.columns(3)
+            c1.markdown(kpi_card("Gasto total", fmt_eur(mf_spend), "💰", accent=META_COLOR, delta=d_mf_spend), unsafe_allow_html=True)
+            c2.markdown(kpi_card("Alcance", fmt_num(mf_alc), "👁️", accent=META_COLOR, delta=d_mf_alc), unsafe_allow_html=True)
+            c3.markdown(kpi_card("Impresiones", fmt_num(mf_imp), "📊", accent=META_COLOR, delta=d_mf_imp), unsafe_allow_html=True)
+
+            c4, c5, c6 = st.columns(3)
+            c4.markdown(kpi_card("CPM", fmt_eur(mf_cpm), "📈", accent=META_COLOR, delta=d_mf_cpm), unsafe_allow_html=True)
+            c5.markdown(kpi_card("CTR", fmt_pct(mf_ctr), "🖱️", accent=META_COLOR, delta=d_mf_ctr), unsafe_allow_html=True)
+            c6.markdown(kpi_card("CPC", fmt_eur(mf_cpc), "💶", accent=META_COLOR, delta=d_mf_cpc), unsafe_allow_html=True)
+
+            r3a, r3b, r3c, r3d = st.columns(4)
+            r3a.markdown(kpi_card("Leads",           fmt_num(d_lead["results"]), "🎯", accent=META_COLOR, delta=d_leads), unsafe_allow_html=True)
+            r3b.markdown(kpi_card("CPL",             fmt_eur(cpl),               "💡", accent=META_COLOR, delta=d_cpl), unsafe_allow_html=True)
+            r3c.markdown(kpi_card("Result. landing", fmt_num(d_land["results"]), "🌐", accent=META_COLOR, delta=d_land_res), unsafe_allow_html=True)
+            r3d.markdown(kpi_card("CPR landing",     fmt_eur(cpr),               "💡", accent=META_COLOR, delta=d_cpr), unsafe_allow_html=True)
 
     with col_google:
         st.markdown(platform_header("Google Ads", "Cuenta Becier · 1632468817", "google"),
@@ -1958,19 +2077,7 @@ def main():
             avg_cpm    = (google_spend / total_imp * 1000) if total_imp else 0
             cost_conv  = (google_spend / total_conv) if total_conv else None
 
-            c1, c2, c3 = st.columns(3)
-            c1.markdown(kpi_card("Gasto total", fmt_eur(google_spend), "💰", accent=GOOGLE_COLOR), unsafe_allow_html=True)
-            c2.markdown(kpi_card("Clics", fmt_num(total_cli), "🖱️", accent=GOOGLE_COLOR), unsafe_allow_html=True)
-            c3.markdown(kpi_card("Impresiones", fmt_num(total_imp), "📊", accent=GOOGLE_COLOR), unsafe_allow_html=True)
-
-            c4, c5, c6 = st.columns(3)
-            c4.markdown(kpi_card("CTR medio", fmt_pct(avg_ctr), "📈", accent=GOOGLE_COLOR), unsafe_allow_html=True)
-            c5.markdown(kpi_card("CPC medio", fmt_eur(avg_cpc), "💶", accent=GOOGLE_COLOR), unsafe_allow_html=True)
-            c6.markdown(kpi_card("Conversiones", f"{total_conv:.0f}", "✅", accent=GOOGLE_COLOR), unsafe_allow_html=True)
-
-            c7, _, _ = st.columns(3)
-            c7.markdown(kpi_card("Coste / conv.", fmt_eur(cost_conv), "💡", accent=GOOGLE_COLOR), unsafe_allow_html=True)
-
+            d_g_spend = d_g_cli = d_g_imp = d_g_ctr = d_g_cpc = d_g_conv = d_g_cpa = ""
             if comp_since:
                 cg_spend = sum(c["Gasto (€)"] for c in google_camps_cmp)
                 cg_imp   = sum(c["Impresiones"] for c in google_camps_cmp)
@@ -1980,15 +2087,26 @@ def main():
                 cg_cpc   = (cg_spend / cg_cli) if cg_cli else 0
                 cg_cpa   = (cg_spend / cg_conv) if cg_conv else None
 
-                render_comparison_strip([
-                    cmp_chip("Gasto",       fmt_eur(cg_spend), google_spend, cg_spend),
-                    cmp_chip("Clics",       fmt_num(cg_cli),   total_cli,    cg_cli),
-                    cmp_chip("Impr.",       fmt_num(cg_imp),   total_imp,    cg_imp),
-                    cmp_chip("CTR",         fmt_pct(cg_ctr),   avg_ctr,      cg_ctr),
-                    cmp_chip("CPC",         fmt_eur(cg_cpc),   avg_cpc,      cg_cpc, invert=True),
-                    cmp_chip("Conv.",       f"{cg_conv:.0f}",  total_conv,   cg_conv),
-                    cmp_chip("Coste/conv.", fmt_eur(cg_cpa),   cost_conv,    cg_cpa, invert=True),
-                ], comparison_mode)
+                d_g_spend = kpi_delta(fmt_eur(cg_spend), google_spend, cg_spend, comparison_mode)
+                d_g_cli   = kpi_delta(fmt_num(cg_cli),   total_cli,    cg_cli,   comparison_mode)
+                d_g_imp   = kpi_delta(fmt_num(cg_imp),   total_imp,    cg_imp,   comparison_mode)
+                d_g_ctr   = kpi_delta(fmt_pct(cg_ctr),    avg_ctr,      cg_ctr,   comparison_mode)
+                d_g_cpc   = kpi_delta(fmt_eur(cg_cpc),   avg_cpc,      cg_cpc,   comparison_mode, invert=True)
+                d_g_conv  = kpi_delta(f"{cg_conv:.0f}",  total_conv,   cg_conv,  comparison_mode)
+                d_g_cpa   = kpi_delta(fmt_eur(cg_cpa),   cost_conv,    cg_cpa,   comparison_mode, invert=True)
+
+            c1, c2, c3 = st.columns(3)
+            c1.markdown(kpi_card("Gasto total", fmt_eur(google_spend), "💰", accent=GOOGLE_COLOR, delta=d_g_spend), unsafe_allow_html=True)
+            c2.markdown(kpi_card("Clics", fmt_num(total_cli), "🖱️", accent=GOOGLE_COLOR, delta=d_g_cli), unsafe_allow_html=True)
+            c3.markdown(kpi_card("Impresiones", fmt_num(total_imp), "📊", accent=GOOGLE_COLOR, delta=d_g_imp), unsafe_allow_html=True)
+
+            c4, c5, c6 = st.columns(3)
+            c4.markdown(kpi_card("CTR medio", fmt_pct(avg_ctr), "📈", accent=GOOGLE_COLOR, delta=d_g_ctr), unsafe_allow_html=True)
+            c5.markdown(kpi_card("CPC medio", fmt_eur(avg_cpc), "💶", accent=GOOGLE_COLOR, delta=d_g_cpc), unsafe_allow_html=True)
+            c6.markdown(kpi_card("Conversiones", f"{total_conv:.0f}", "✅", accent=GOOGLE_COLOR, delta=d_g_conv), unsafe_allow_html=True)
+
+            c7, _, _ = st.columns(3)
+            c7.markdown(kpi_card("Coste / conv.", fmt_eur(cost_conv), "💡", accent=GOOGLE_COLOR, delta=d_g_cpa), unsafe_allow_html=True)
         else:
             st.markdown('<p style="color:#5a6080;font-size:13px">Sin datos de Google Ads para el período.</p>',
                         unsafe_allow_html=True)
@@ -2054,13 +2172,19 @@ def main():
         if _seed_campaign not in _valid_campaigns:
             _seed_campaign = None
 
-        active_campaign = render_meta_table(meta_camps, _seed_campaign)
+        active_campaign = render_meta_table(
+            meta_camps, _seed_campaign,
+            campaigns_cmp=meta_camps_cmp if comp_since else None,
+            comparison_label=comparison_mode if comp_since else None)
         st.markdown('<div style="height:20px"></div>', unsafe_allow_html=True)
         st.markdown('<div style="color:#5a6080;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Por conjunto de anuncios (Adset)</div>', unsafe_allow_html=True)
         if active_campaign:
             st.markdown(f'<div style="color:#5a6080;font-size:11px;margin-bottom:8px">Filtro activo: {html.escape(active_campaign)} · clic de nuevo en el nombre para quitarlo</div>', unsafe_allow_html=True)
         meta_adsets_view = [a for a in meta_adsets if a["Campaña"] == active_campaign] if active_campaign else meta_adsets
-        render_meta_adsets_table(meta_adsets_view)
+        render_meta_adsets_table(
+            meta_adsets_view,
+            adsets_cmp=meta_adsets_cmp if comp_since else None,
+            comparison_label=comparison_mode if comp_since else None)
 
         # ── Creatividades ──────────────────────────────────────────────────
         st.markdown('<div style="height:20px"></div>', unsafe_allow_html=True)
@@ -2120,7 +2244,10 @@ def main():
         st.markdown('<div style="height:12px"></div>', unsafe_allow_html=True)
         if sel_global_vert:
             st.markdown(f'<div style="color:#5a6080;font-size:11px;margin-bottom:8px">Filtro activo: {sel_vert_sidebar}</div>', unsafe_allow_html=True)
-        render_google_table(google_camps)
+        render_google_table(
+            google_camps,
+            campaigns_cmp=google_camps_cmp if comp_since else None,
+            comparison_label=comparison_mode if comp_since else None)
 
         # ── Keywords ──────────────────────────────────────────────────────
         st.markdown('<div style="height:20px"></div>', unsafe_allow_html=True)

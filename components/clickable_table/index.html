@@ -44,6 +44,8 @@ th[data-tip]:hover::after{content:attr(data-tip);position:absolute;top:calc(100%
 .camp-link{cursor:pointer}
 .camp-link:hover{color:#8898cc}
 .camp-link.active{color:#6a9fff;font-weight:700;text-decoration:underline}
+tr.cmp-row td{background:#10142a;color:#5a6080;font-size:11.5px;border-bottom:1px solid #161930}
+tr.cmp-row td:first-child{padding-left:26px;font-weight:600;color:#5a6080}
 </style>
 </head>
 <body>
@@ -86,10 +88,26 @@ th[data-tip]:hover::after{content:attr(data-tip);position:absolute;top:calc(100%
         : String(av).localeCompare(String(bv), "es");
     }
 
+    function groupRows(rows) {
+      var items = [];
+      rows.forEach(function (r) {
+        if (r.dataset.cmp && items.length) {
+          items[items.length - 1].cmpRows.push(r);
+        } else {
+          items.push({ main: r, cmpRows: [] });
+        }
+      });
+      return items;
+    }
+
     var hasSec = allRows.some(function (r) { return r.dataset.sec; });
     if (!hasSec) {
-      allRows.sort(cmp);
-      allRows.forEach(function (r) { tbody.appendChild(r); });
+      var items = groupRows(allRows);
+      items.sort(function (a, b) { return cmp(a.main, b.main); });
+      items.forEach(function (it) {
+        tbody.appendChild(it.main);
+        it.cmpRows.forEach(function (r) { tbody.appendChild(r); });
+      });
     } else {
       var secs = [];
       var cur = { hdr: null, rows: [] };
@@ -99,9 +117,13 @@ th[data-tip]:hover::after{content:attr(data-tip);position:absolute;top:calc(100%
       });
       secs.push(cur);
       secs.forEach(function (s) {
-        s.rows.sort(cmp);
+        var items = groupRows(s.rows);
+        items.sort(function (a, b) { return cmp(a.main, b.main); });
         if (s.hdr) tbody.appendChild(s.hdr);
-        s.rows.forEach(function (r) { tbody.appendChild(r); });
+        items.forEach(function (it) {
+          tbody.appendChild(it.main);
+          it.cmpRows.forEach(function (r) { tbody.appendChild(r); });
+        });
       });
     }
     th.classList.add(asc ? "desc" : "asc");
