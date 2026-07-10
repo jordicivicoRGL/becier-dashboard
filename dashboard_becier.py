@@ -16,6 +16,8 @@ import plotly.graph_objects as go
 import pandas as pd
 import requests
 
+from tools.sheets_tools import summarize_funnel
+
 # ─── COMPONENTE: tabla de campañas Meta con clic para filtrar ────────────────
 _clickable_meta_table = components.declare_component(
     "clickable_meta_table",
@@ -70,6 +72,8 @@ section[data-testid="stSidebar"] { background-color: #0b0d16; border-right: 1px 
     border-radius: 10px;
     padding: 16px 18px 14px;
     margin-bottom: 10px;
+    min-height: 112px;
+    box-sizing: border-box;
     transition: border-color 0.2s;
 }
 .kpi-card:hover { border-color: #2e3560; }
@@ -892,6 +896,15 @@ def fetch_google_daily(since: str, until: str) -> list:
             d = row.segments.date
             daily[d] = daily.get(d, 0) + row.metrics.cost_micros / 1_000_000
         return [{"date": k, "spend": round(v, 2)} for k, v in sorted(daily.items())]
+    except Exception:
+        return []
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def fetch_becier_deals_cached() -> list:
+    try:
+        from tools.sheets_tools import fetch_becier_deals
+        return fetch_becier_deals()
     except Exception:
         return []
 
@@ -1835,7 +1848,7 @@ def main():
         st.markdown('<div style="padding:16px 0 20px"><img src="https://www.becier.ad/wp-content/uploads/logo_gb_text_white_m.png" style="height:34px;object-fit:contain"><div style="font-size:11px;color:#3a4060;margin-top:6px">Performance Dashboard</div></div>',
                     unsafe_allow_html=True)
 
-        _vista_opts = ["📊 Período", "📅 Anual 2026"]
+        _vista_opts = ["📊 Mes anterior", "🗓️ Mes actual", "📅 Anual 2026"]
         _vista_idx  = _vista_opts.index(qp.get("vista")) if qp.get("vista") in _vista_opts else 0
         vista = st.radio("Vista", _vista_opts, index=_vista_idx,
                          key="vista_toggle", label_visibility="collapsed")
@@ -1844,6 +1857,10 @@ def main():
 
         if vista == "📅 Anual 2026":
             st.markdown('<div style="color:#6a7aaa;font-size:12px">Datos del año 2026<br>1 ene → hoy</div>',
+                        unsafe_allow_html=True)
+        elif vista == "🗓️ Mes actual":
+            _mes_since, _ = _period_this_month()
+            st.markdown(f'<div style="color:#6a7aaa;font-size:12px">Datos de {month_label(_mes_since)}<br>1 → hoy</div>',
                         unsafe_allow_html=True)
         else:
             pass
@@ -1863,7 +1880,7 @@ def main():
         st.markdown('<hr style="border-color:#1a1e35;margin:16px 0 12px">', unsafe_allow_html=True)
         st.markdown('<div style="color:#3a4060;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Vertical</div>',
                     unsafe_allow_html=True)
-        _vkey = "gvf_2026" if vista == "📅 Anual 2026" else "gvf_period"
+        _vkey = "gvf_2026" if vista == "📅 Anual 2026" else ("gvf_mes_actual" if vista == "🗓️ Mes actual" else "gvf_period")
         _vert_opts = ["🔘 Totes", "🟡 Vehicles", "🟢 Becser", "🔴 Becar", "🟠 Grup Becier"]
         _vert_idx  = _vert_opts.index(qp.get("vert")) if qp.get("vert") in _vert_opts else 0
         sel_vert_sidebar = st.selectbox("", _vert_opts, index=_vert_idx,
@@ -1877,6 +1894,10 @@ def main():
         since = "2026-01-01"
         until = str(date.today())
         period_label = "Anual 2026"
+        st.markdown('<div style="height:20px"></div>', unsafe_allow_html=True)
+    elif vista == "🗓️ Mes actual":
+        since, until = _period_this_month()
+        period_label = "Mes actual"
         st.markdown('<div style="height:20px"></div>', unsafe_allow_html=True)
     else:
         col_sel, col_cmp, col_pad = st.columns([2, 2, 3])
@@ -1915,6 +1936,7 @@ def main():
         google_res   = fetch_google_campaigns(since, until)
         google_daily = fetch_google_daily(since, until)
         google_kw_res = fetch_google_keywords(since, until)
+        becier_deals  = fetch_becier_deals_cached()
 
     google_camps = google_res.get("campaigns", [])
     google_error = google_res.get("error")
@@ -1974,7 +1996,19 @@ def main():
         f'</div>',
         unsafe_allow_html=True)
 
+    # ── Funnel de ventas (CRM) — leads > negociaciones > ventas ──────────────
+    FUNNEL_COLOR = "#f5a623"
+    funnel = summarize_funnel(becier_deals, since, until)
+    f_leads, f_neg, f_vent = funnel["leads"], funnel["negociaciones"], funnel["ventas"]
+    pct_neg  = f"{f_neg / f_leads * 100:.1f}% del total"  if f_leads else "—"
+    pct_vent = f"{f_vent / f_leads * 100:.1f}% del total" if f_leads else "—"
 
+    st.markdown(platform_header("Ventas (CRM)", "Origen Paid Media · 2026", "combined"),
+                unsafe_allow_html=True)
+    fc1, fc2, fc3 = st.columns(3)
+    fc1.markdown(kpi_card("Leads", fmt_num(f_leads), "🎯", sub="&nbsp;", accent=FUNNEL_COLOR), unsafe_allow_html=True)
+    fc2.markdown(kpi_card("Negociaciones", fmt_num(f_neg), "🤝", sub=pct_neg, accent=FUNNEL_COLOR), unsafe_allow_html=True)
+    fc3.markdown(kpi_card("Ventas", fmt_num(f_vent), "✅", sub=pct_vent, accent=FUNNEL_COLOR), unsafe_allow_html=True)
 
     # ── KPIs: dos columnas por plataforma ───────────────────────────────────
     col_meta, col_google = st.columns(2, gap="large")
