@@ -116,6 +116,8 @@ Campaña
 
 Justifica siempre la estrategia elegida según el historial de la cuenta.
 
+⚠️ Revisar antes del 17/08/2026: en cuentas con campañas Target CPA/ROAS marcadas como "Limitada por presupuesto", Google empezará a acercar la entrega al target real. Antes de esa fecha, usar el Bid Target Adjustment Tool (disponible en la cuenta desde el 6/07/2026) para revisar el rendimiento histórico y decidir si el target o el presupuesto actual siguen siendo razonables. (Retirar esta nota pasada esa fecha.)
+
 ### Palabras clave
 
 Tipos de concordancia recomendados:
@@ -264,6 +266,8 @@ El Revisor actúa como último paso antes de que cualquier output llegue a Jordi
 - [ ] Lista de palabras clave negativas propuesta
 - [ ] Extensiones de anuncio detalladas según el objetivo
 - [ ] Configuración de ubicación: "Personas en" (no "interesadas en")
+- [ ] Si hay campañas Target CPA/ROAS en estado "Limitada por presupuesto", se ha revisado el impacto del cambio de bidding del 17/08/2026 y se ha ajustado target/presupuesto si procede
+- [ ] Ningún activo generado automáticamente por Google (assets automáticos, títulos/descripciones autogenerados, expansión de URL final) está activo sin revisión y aprobación explícita nuestra
 
 ---
 
@@ -291,3 +295,9 @@ Si en la sesión has recopilado información nueva y útil sobre el cliente, gu�
 - **Keywords negativas añadidas**: 
 - **Notas de campañas anteriores**: 
 ```
+
+---
+
+## Notas operativas vigentes
+
+- **Passkey obligatoria (desde 15/07/2026):** añadir usuarios, cambiar accesos, modificar facturación o vincular cuentas en Google Ads ahora exige passkey, con una demora de seguridad de hasta 7 días tras configurar una passkey nueva. Tenlo en cuenta al gestionar altas/bajas de acceso de clientes o del equipo.
