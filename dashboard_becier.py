@@ -1894,11 +1894,21 @@ def main():
         since = "2026-01-01"
         until = str(date.today())
         period_label = "Anual 2026"
-        st.markdown('<div style="height:20px"></div>', unsafe_allow_html=True)
+        col_cmp, col_pad = st.columns([2, 5])
+        with col_cmp:
+            _cmp_idx = COMPARISON_OPTIONS.index(qp.get("cmp")) if qp.get("cmp") in COMPARISON_OPTIONS else 0
+            comparison_mode = st.selectbox("🔁 Comparar con", COMPARISON_OPTIONS, index=_cmp_idx,
+                                           key="cmp_sel")
+            st.query_params["cmp"] = comparison_mode
     elif vista == "🗓️ Mes actual":
         since, until = _period_this_month()
         period_label = "Mes actual"
-        st.markdown('<div style="height:20px"></div>', unsafe_allow_html=True)
+        col_cmp, col_pad = st.columns([2, 5])
+        with col_cmp:
+            _cmp_idx = COMPARISON_OPTIONS.index(qp.get("cmp")) if qp.get("cmp") in COMPARISON_OPTIONS else 0
+            comparison_mode = st.selectbox("🔁 Comparar con", COMPARISON_OPTIONS, index=_cmp_idx,
+                                           key="cmp_sel")
+            st.query_params["cmp"] = comparison_mode
     else:
         col_sel, col_cmp, col_pad = st.columns([2, 2, 3])
         with col_sel:
