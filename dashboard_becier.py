@@ -17,6 +17,7 @@ import pandas as pd
 import requests
 
 from tools.sheets_tools import summarize_funnel
+from tools.campaign_naming import parse_campaign_parts
 
 # ─── COMPONENTE: tabla de campañas Meta con clic para filtrar ────────────────
 _clickable_meta_table = components.declare_component(
@@ -296,81 +297,7 @@ def month_label(since: str) -> str:
 
 
 # ─── PARSEO DE NOMBRE DE CAMPAÑA ─────────────────────────────────────────────
-# Formato: AND_PROS_[VERTICAL]_[OBJETIVO]
-_VERTICAL_MAP = {
-    "VEHICLES":            "Vehicles",
-    "VO":                  "Vehicles",
-    "VEHICLES-PLA-ENGEGA": "Vehicles",
-    "VEHICLES-LEAD":       "Vehicles",
-    "BECAR":               "Becar",
-    "AVIS":                "Becar",
-    "AVIS-BECAR":          "Becar",
-    "BECSER":              "Becser",
-    "GRUP":                "Grup Becier",
-    "GRUP-BECIER":         "Grup Becier",
-    "BECIER":              "Grup Becier",
-    "OKSIO":               "Vehicles",
-}
-_OBJETIVO_MAP = {
-    "LEAD AD":   "Lead Ad",
-    "LEAD":      "Lead Ad",
-    "LE":        "Landing",
-    "TRAFIC WEB":"Landing",
-    "TRAFIC":    "Landing",
-    "TRAFFIC":   "Landing",
-    "ALCANCE":   "Impresiones",
-    "REACH":     "Impresiones",
-}
-
-_GOOGLE_CAMPAIGN_TYPES = {"SEARCH", "DISPLAY", "SHOPPING", "PMAX", "VIDEO",
-                          "DSA", "PERFORMANCE", "SMART", "DISCOVERY"}
-
-def parse_campaign_parts(name: str) -> dict:
-    """Extrae Vertical y Objetivo según el formato del nombre de campaña.
-    Meta:   AND_PROS_[VERTICAL]_[OBJETIVO]   → vertical en pos 2, objetivo en pos 3+
-    Google: [TIPO]_[OBJETIVO]_[VERTICAL]_... → vertical en pos 2, objetivo en pos 1
-    """
-    parts = [p.strip() for p in name.split("_")]
-    vertical = "Otros"
-    objetivo = "—"
-
-    if not parts:
-        return {"vertical": vertical, "objetivo": objetivo}
-
-    # Detectar formato Google por el tipo de campaña en parts[0]
-    is_google_format = parts[0].upper() in _GOOGLE_CAMPAIGN_TYPES
-
-    if is_google_format:
-        # TIPO_OBJETIVO_VERTICAL_NOMBRE
-        if len(parts) >= 2:
-            objetivo = _OBJETIVO_MAP.get(parts[1].upper(), parts[1].title())
-        if len(parts) >= 3:
-            vertical = _VERTICAL_MAP.get(parts[2].upper(), parts[2].title())
-    else:
-        # Formato Meta: AND_PROS_VERTICAL_OBJETIVO o similar
-        # Buscar vertical en pos 2, o escanear todas las partes
-        if len(parts) >= 3:
-            v = parts[2].upper()
-            vertical = _VERTICAL_MAP.get(v, "Otros")
-            if vertical == "Otros":
-                for part in parts:
-                    # Buscar la parte completa primero, luego la primera palabra antes del guión
-                    mapped = _VERTICAL_MAP.get(part.upper()) or _VERTICAL_MAP.get(part.upper().split("-")[0])
-                    if mapped:
-                        vertical = mapped
-                        break
-
-        if len(parts) >= 4:
-            objetivo = None
-            for end in range(len(parts), 3, -1):
-                candidate = " ".join(parts[3:end]).upper()
-                if candidate in _OBJETIVO_MAP:
-                    objetivo = _OBJETIVO_MAP[candidate]
-                    break
-            if objetivo is None:
-                objetivo = parts[3].title()
-
-    return {"vertical": vertical, "objetivo": objetivo}
+# Ver tools/campaign_naming.py (fuente única, compartida con la skill /reporte-meta)
 
 VERTICAL_STYLES = {
     "Vehicles":    "tag-vehicles",
