@@ -1934,8 +1934,15 @@ def main():
         unsafe_allow_html=True)
 
     # ── Funnel de ventas (CRM) — leads > negociaciones > ventas ──────────────
+    # El CRM de origen solo registra negociaciones de la vertical Vehicles (VO/VN/renting):
+    # no hay negociaciones de Becser, Becar ni Grup Becier en este sheet. Por eso, si el
+    # filtro de vertical del sidebar selecciona otra vertical, el funnel debe mostrar 0
+    # en vez de repetir el total sin filtrar.
     FUNNEL_COLOR = "#f5a623"
-    funnel = summarize_funnel(becier_deals, since, until)
+    if sel_global_vert and sel_global_vert != "Vehicles":
+        funnel = {"leads": 0, "negociaciones": 0, "ventas": 0}
+    else:
+        funnel = summarize_funnel(becier_deals, since, until)
     f_leads, f_neg, f_vent = funnel["leads"], funnel["negociaciones"], funnel["ventas"]
     pct_neg  = f"{f_neg / f_leads * 100:.1f}% del total"  if f_leads else "—"
     pct_vent = f"{f_vent / f_leads * 100:.1f}% del total" if f_leads else "—"
