@@ -35,7 +35,13 @@ ACCENT = "#14b8a6"      # teal — accent neutre (salut/Lean)
 ACCENT_SOFT = "rgba(20,184,166,0.12)"
 GOOD = "#22c55e"
 BAD = "#ef4444"
+WARN = "#f59e0b"
 NEUTRAL_TXT = "#8894c0"
+
+# Indicadors de balanç: no busquen "millorar" un valor sinó comprovar que una
+# millora d'un altre indicador no perjudica qualitat/seguretat. Es tracten amb
+# una etiqueta i lògica de semàfor diferents a la resta (veure indicador_on_track).
+BALANCING_INDICATORS = {"Taxa de complicacions post-trasplantament del donant (%)"}
 
 # ─── PAGE CONFIG ──────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -115,6 +121,10 @@ def _status_from_progress(p) -> str:
     if p > 0:
         return "En proces"
     return "Pendent"
+
+
+def is_overdue(t: dict, today: date) -> bool:
+    return t["estat"] != "Fet" and t["fi"] is not None and t["fi"] < today
 
 
 # ─── FETCH: CRONOGRAMA ─────────────────────────────────────────────────────────
@@ -295,6 +305,31 @@ table.custom tr:hover td { background:#151933; }
 .ind-meta { color:#444c70; font-size:10.5px; margin-top:8px; border-top:1px solid #1a1e35; padding-top:8px; }
 
 .divider { border: none; border-top: 1px solid #1a1e35; margin: 24px 0; }
+
+.summary-banner {
+    display:flex; align-items:flex-start; gap:12px; background:#101f24; border:1px solid #1c3a3f;
+    border-radius:10px; padding:14px 18px; margin-bottom:18px; color:#c8e6e8; font-size:13px; line-height:1.5;
+}
+.summary-banner b { color:#4fd6bd; }
+.summary-icon { font-size:16px; }
+
+.balanc-badge {
+    display:inline-block; font-size:9.5px; font-weight:700; padding:2px 8px; border-radius:10px;
+    background: rgba(136,148,192,0.15); color:#a6b0d6; margin-left:8px; letter-spacing:0.3px; vertical-align:middle;
+}
+
+.overdue-badge { display:inline-block; font-size:10px; font-weight:700; padding:2px 9px; border-radius:20px; background:rgba(239,68,68,0.15); color:#f87171; white-space:nowrap; }
+tr.row-overdue td { background: rgba(239,68,68,0.05); }
+tr.row-overdue td:first-child { box-shadow: inset 3px 0 0 #ef4444; }
+
+.disclaimer-strip { display:flex; flex-direction:column; gap:8px; margin: 0 0 20px; }
+.disclaimer {
+    display:flex; align-items:flex-start; gap:10px; padding: 10px 16px; border-radius: 8px;
+    font-size: 12px; line-height:1.5; background: rgba(251,191,36,0.07); border: 1px solid rgba(251,191,36,0.24); color: #d8c483;
+}
+.disclaimer b { color: #fbbf24; }
+.disclaimer.info { background: rgba(20,184,166,0.07); border-color: rgba(20,184,166,0.24); color: #a8d8d0; }
+.disclaimer.info b { color: #4fd6bd; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -318,8 +353,22 @@ def section_title(text: str):
     st.markdown(f'<div class="section-title"><span class="dot"></span>{text}</div>', unsafe_allow_html=True)
 
 
+def render_disclaimers():
+    st.markdown(
+        '<div class="disclaimer-strip">'
+        '<div class="disclaimer">⚠️ <div><b>Dades d\'exemple:</b> aquest dashboard mostra un cas de demostració fictici '
+        '(HUMS · circuit de trasplantament renal de donant viu) per ensenyar com queda un projecte real connectat. '
+        'Ni els noms de l\'equip clínic ni les xifres corresponen a dades reals de cap pacient ni hospital.</div></div>'
+        '<div class="disclaimer info">⚖️ <div><b>Què és un "indicador de balanç":</b> a diferència dels altres indicadors '
+        '(que busquen millorar un valor), un indicador de balanç comprova que una millora no en perjudiqui una altra '
+        '— per exemple, que accelerar el circuit no faci pujar les complicacions. Es marca en verd quan es manté '
+        'estable dins el llindar acordat, no quan "millora".</div></div>'
+        '</div>', unsafe_allow_html=True,
+    )
+
+
 # ─── CHARTS ─────────────────────────────────────────────────────────────────────
-def chart_gantt(tasques: list) -> go.Figure:
+def chart_gantt(tasques: list, today: date) -> go.Figure:
     ordered = sorted(
         [t for t in tasques if t["inici"] and t["fi"]],
         key=lambda t: (t["proposta"], t["inici"]),
@@ -328,21 +377,29 @@ def chart_gantt(tasques: list) -> go.Figure:
     labels = [f'{t["proposta"].split(" - ")[0]} · {t["accio"][:42]}{"…" if len(t["accio"]) > 42 else ""}' for t in ordered]
     for t, label in zip(ordered, labels):
         duration_ms = (((t["fi"] - t["inici"]).days + 1) * 24 * 60 * 60 * 1000)
+        overdue = is_overdue(t, today)
+        marker_line = dict(color=BAD, width=2) if overdue else dict(width=0)
+        estat_txt = f'{STATUS_LABEL[t["estat"]]}{" · ENDARRERIDA" if overdue else ""}'
         fig.add_trace(go.Bar(
             x=[duration_ms],
             y=[label],
             base=[t["inici"].isoformat()],
             orientation="h",
-            marker=dict(color=STATUS_COLOR[t["estat"]], line=dict(width=0)),
+            marker=dict(color=STATUS_COLOR[t["estat"]], line=marker_line),
             hovertemplate=(f'<b>{t["accio"]}</b><br>Responsable: {t["responsable"]}'
                             f'<br>{fmt_date(t["inici"])} — {fmt_date(t["fi"])}'
-                            f'<br>Estat: {STATUS_LABEL[t["estat"]]}<extra></extra>'),
+                            f'<br>Estat: {estat_txt}<extra></extra>'),
             showlegend=False,
         ))
+    fig.add_vline(x=today.isoformat(), line=dict(color=NEUTRAL_TXT, width=1.5, dash="dot"))
+    fig.add_annotation(
+        x=today.isoformat(), y=1, yref="paper", yanchor="bottom", showarrow=False,
+        text="avui", font=dict(color=NEUTRAL_TXT, size=10.5),
+    )
     fig.update_layout(
         barmode="stack",
         height=max(320, 34 * len(ordered) + 60),
-        margin=dict(l=10, r=10, t=10, b=10),
+        margin=dict(l=10, r=10, t=24, b=10),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(color="#c8cce0", size=11.5),
@@ -440,24 +497,52 @@ def _parse_numeric(v):
         return None
 
 
-def indicador_card_html(ind: dict, months: list) -> str:
+def indicador_on_track(ind: dict, months: list):
+    """Retorna (on_track: bool|None, latest, delta_mes_anterior) per a un indicador.
+
+    Els indicadors de balanç (BALANCING_INDICATORS) es consideren "on track" quan
+    es mantenen per sota/igual de l'objectiu, independentment de si l'objectiu és
+    igual al punt de partida (no busquen millorar, busquen no empitjorar)."""
     x = [m for m in months if m in ind["valors"]]
     latest = ind["valors"][x[-1]] if x else None
+    previous = ind["valors"][x[-2]] if len(x) >= 2 else None
+    delta = (latest - previous) if (latest is not None and previous is not None) else None
+
     target = _parse_numeric(ind.get("objetiu"))
     baseline = _parse_numeric(ind.get("punt_partida"))
+    if latest is None or target is None:
+        return None, latest, delta
 
-    color = ACCENT
-    if latest is not None and target is not None and baseline is not None:
-        improving_up = target >= baseline
-        on_track = (latest >= target) if improving_up else (latest <= target)
-        color = GOOD if on_track else BAD
+    if ind["nom"] in BALANCING_INDICATORS:
+        return latest <= target, latest, delta
+
+    if baseline is None:
+        return None, latest, delta
+    improving_up = target >= baseline
+    on_track = (latest >= target) if improving_up else (latest <= target)
+    return on_track, latest, delta
+
+
+def indicador_card_html(ind: dict, months: list) -> str:
+    x = [m for m in months if m in ind["valors"]]
+    on_track, latest, delta = indicador_on_track(ind, months)
+    color = GOOD if on_track is True else (BAD if on_track is False else ACCENT)
 
     latest_str = fmt_num(latest, 1) if latest is not None else "—"
+    delta_html = ""
+    if delta is not None:
+        arrow = "▲" if delta > 0 else ("▼" if delta < 0 else "▬")
+        delta_html = f'<span style="font-size:10.5px;color:#5a6080;margin-left:6px;">{arrow} {abs(delta):.1f} vs mes anterior</span>'
+
+    balanc_badge = ""
+    if ind["nom"] in BALANCING_INDICATORS:
+        balanc_badge = '<span class="balanc-badge" title="Indicador de balanç: comprova que una millora no en perjudiqui una altra">⚖ Indicador de balanç</span>'
+
     return (
         f'<div class="ind-card">'
-        f'<div class="ind-name">{ind["nom"]}</div>'
+        f'<div class="ind-name">{ind["nom"]}{balanc_badge}</div>'
         f'<div class="ind-row"><span class="ind-metric-label">Valor actual ({x[-1] if x else "—"})</span>'
-        f'<span class="ind-metric-value" style="color:{color}">{latest_str}</span></div>'
+        f'<span class="ind-metric-value" style="color:{color}">{latest_str}{delta_html}</span></div>'
         f'<div class="ind-row"><span class="ind-metric-label">Punt de partida</span>'
         f'<span class="ind-metric-value" style="font-size:12px;color:#8894c0">{ind["punt_partida"] or "—"}</span></div>'
         f'<div class="ind-row"><span class="ind-metric-label">Objectiu</span>'
@@ -498,11 +583,20 @@ actius_prop = filt_prop or propostes
 tasques_filtrades = [t for t in tasques if t["responsable"] in actius_resp and t["proposta"] in actius_prop]
 
 # ─── HEADER ─────────────────────────────────────────────────────────────────────
+TODAY = date.today()
+
 total_accions = len(tasques)
 completades = sum(1 for t in tasques if t["estat"] == "Fet")
 en_curs = sum(1 for t in tasques if t["estat"] == "En proces")
 pendents = sum(1 for t in tasques if t["estat"] == "Pendent")
+endarrerides = sum(1 for t in tasques if is_overdue(t, TODAY))
 progres_global = (sum(t["progres"] for t in tasques) / total_accions * 100) if total_accions else 0
+
+months_all = indicadors_data["months"]
+indicadors_all = indicadors_data["indicadors"]
+on_track_flags = [indicador_on_track(ind, months_all)[0] for ind in indicadors_all]
+indicadors_ok = sum(1 for f in on_track_flags if f is True)
+n_indicadors = len(indicadors_all)
 
 st.markdown(
     f'<div class="dash-header">'
@@ -512,8 +606,25 @@ st.markdown(
     f'</div>', unsafe_allow_html=True,
 )
 
+render_disclaimers()
+
+# ─── RESUM EXECUTIU ─────────────────────────────────────────────────────────────
+if endarrerides == 0:
+    endarrerides_txt = "cap acció està endarrerida"
+elif endarrerides == 1:
+    endarrerides_txt = "hi ha <b>1 acció endarrerida</b> que cal revisar"
+else:
+    endarrerides_txt = f"hi ha <b>{endarrerides} accions endarrerides</b> que cal revisar"
+
+st.markdown(
+    f'<div class="summary-banner"><span class="summary-icon">📋</span>'
+    f'<div>El projecte avança al <b>{progres_global:.0f}%</b> ({completades} de {total_accions} accions fetes): '
+    f'<b>{indicadors_ok} de {n_indicadors} indicadors</b> ja han assolit el seu objectiu, i {endarrerides_txt}.</div></div>',
+    unsafe_allow_html=True,
+)
+
 # ─── KPI ROW ─────────────────────────────────────────────────────────────────────
-c1, c2, c3, c4, c5 = st.columns(5)
+c1, c2, c3, c4, c5, c6 = st.columns(6)
 with c1:
     st.markdown(kpi_card("Accions totals", str(total_accions), "en el cronograma"), unsafe_allow_html=True)
 with c2:
@@ -523,25 +634,29 @@ with c3:
 with c4:
     st.markdown(kpi_card("Pendents", str(pendents), f"{pendents/total_accions*100:.0f}% del total" if total_accions else "—", accent=STATUS_COLOR["Pendent"]), unsafe_allow_html=True)
 with c5:
-    n_indicadors = len(indicadors_data["indicadors"])
-    st.markdown(kpi_card("Indicadors monitoritzats", str(n_indicadors), "punt de partida vs objectiu"), unsafe_allow_html=True)
+    st.markdown(kpi_card("Endarrerides", str(endarrerides), "respecte la data de fi prevista", accent=BAD if endarrerides else GOOD), unsafe_allow_html=True)
+with c6:
+    st.markdown(kpi_card("Indicadors monitoritzats", str(n_indicadors), f"{indicadors_ok} ja a l'objectiu"), unsafe_allow_html=True)
 
 st.markdown('<hr class="divider">', unsafe_allow_html=True)
 
 # ─── GANTT ──────────────────────────────────────────────────────────────────────
 section_title("Cronograma d'accions")
-st.plotly_chart(chart_gantt(tasques_filtrades), use_container_width=True, config=_NO_INTERACT)
+st.plotly_chart(chart_gantt(tasques_filtrades, TODAY), use_container_width=True, config=_NO_INTERACT)
 
 # ─── TAULA D'ACCIONS ────────────────────────────────────────────────────────────
 rows_html = ""
 for t in sorted(tasques_filtrades, key=lambda t: (t["inici"] or date.max)):
+    overdue = is_overdue(t, TODAY)
+    row_cls = ' class="row-overdue"' if overdue else ""
+    alerta = '<span class="overdue-badge">⚠ Endarrerida</span>' if overdue else "—"
     rows_html += (
-        f'<tr><td>{t["proposta"]}</td><td>{t["accio"]}</td><td>{t["responsable"]}</td>'
-        f'<td>{status_badge(t["estat"])}</td><td>{fmt_date(t["inici"])}</td><td>{fmt_date(t["fi"])}</td></tr>'
+        f'<tr{row_cls}><td>{t["proposta"]}</td><td>{t["accio"]}</td><td>{t["responsable"]}</td>'
+        f'<td>{status_badge(t["estat"])}</td><td>{fmt_date(t["inici"])}</td><td>{fmt_date(t["fi"])}</td><td>{alerta}</td></tr>'
     )
 st.markdown(
     '<div class="styled-table-wrap"><table class="custom">'
-    '<tr><th>Proposta de millora</th><th>Accio</th><th>Responsable</th><th>Estat</th><th>Inici</th><th>Fi</th></tr>'
+    '<tr><th>Proposta de millora</th><th>Accio</th><th>Responsable</th><th>Estat</th><th>Inici</th><th>Fi</th><th>Alerta</th></tr>'
     f'{rows_html}</table></div>', unsafe_allow_html=True,
 )
 
