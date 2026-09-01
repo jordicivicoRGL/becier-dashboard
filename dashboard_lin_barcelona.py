@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
 Dashboard de Seguiment de Projecte — Lin Barcelona (metodologia Lean)
-Cas de demostracio: circuit de trasplantament renal de donant viu (HUMS).
+Cas de demostració: circuit de trasplantament renal de donant viu (HUMS).
 
-A diferencia de dashboard_becier.py / dashboard_dcore.py (Meta/Google Ads), aqui la
-font no son plataformes de publicitat sino un Google Sheet de seguiment de projecte
+A diferència de dashboard_becier.py / dashboard_dcore.py (Meta/Google Ads), aquí la
+font no són plataformes de publicitat sinó un Google Sheet de seguiment de projecte
 (cronograma d'accions Lean + indicadors amb punt de partida i objectiu). L'estructura
-del Sheet reprodueix la plantilla original (fulls "Cronograma" i "Indicadors") perque
+del Sheet reprodueix la plantilla original (fulls "Cronograma" i "Indicadors") perquè
 Lin Barcelona pugui seguir editant-la sense tocar el codi.
 """
 import os
@@ -27,9 +27,9 @@ from googleapiclient.discovery import build
 SHEET_ID = "1-8CarQuUiUSsb0JU1n9NXVThCaERngfTCEhBxqtrWBc"
 GOOGLE_EPOCH = date(1899, 12, 30)
 
-STATUS_ORDER = ["Pendent", "En proces", "Fet"]
-STATUS_COLOR = {"Pendent": "#6b7280", "En proces": "#f59e0b", "Fet": "#14b8a6"}
-STATUS_LABEL = {"Pendent": "Pendent", "En proces": "En proces", "Fet": "Fet"}
+STATUS_ORDER = ["Pendent", "En procés", "Fet"]
+STATUS_COLOR = {"Pendent": "#6b7280", "En procés": "#f59e0b", "Fet": "#14b8a6"}
+STATUS_LABEL = {"Pendent": "Pendent", "En procés": "En procés", "Fet": "Fet"}
 
 ACCENT = "#14b8a6"      # teal — accent neutre (salut/Lean)
 ACCENT_SOFT = "rgba(20,184,166,0.12)"
@@ -39,8 +39,8 @@ WARN = "#f59e0b"
 NEUTRAL_TXT = "#8894c0"
 
 # Indicadors de balanç: no busquen "millorar" un valor sinó comprovar que una
-# millora d'un altre indicador no perjudica qualitat/seguretat. Es tracten amb
-# una etiqueta i lògica de semàfor diferents a la resta (veure indicador_on_track).
+# millora d'un altre indicador no perjudiqui la qualitat/seguretat. Es tracten amb
+# una etiqueta i una lògica de semàfor diferents de la resta (veure indicador_on_track).
 BALANCING_INDICATORS = {"Taxa de complicacions post-trasplantament del donant (%)"}
 
 # ─── PAGE CONFIG ──────────────────────────────────────────────────────────────
@@ -119,7 +119,7 @@ def _status_from_progress(p) -> str:
     if p >= 1:
         return "Fet"
     if p > 0:
-        return "En proces"
+        return "En procés"
     return "Pendent"
 
 
@@ -152,7 +152,7 @@ def fetch_cronograma() -> dict:
         if not proposta and not accio:
             continue
         if not isinstance(progres, (int, float)) and not isinstance(inici, (int, float)):
-            # fila d'instruccions de la plantilla (p.ex. "Esta fila indica el final...")
+            # fila d'instruccions de la plantilla (p. ex. "Esta fila indica el final...")
             continue
         progres = float(progres) if isinstance(progres, (int, float)) else 0.0
         inici_d = _serial_to_date(inici)
@@ -176,8 +176,8 @@ def fetch_indicadors() -> dict:
     service = _get_sheets_service()
 
     # Dues lectures de la mateixa graella: FORMATTED per a etiquetes/mesos/text
-    # (p.ex. "feb-26", "45%") i UNFORMATTED per als valors mensuals numerics
-    # (evita que Sheets els torni com a serials de data o amb coma decimal).
+    # (p. ex. "feb-26", "45%") i UNFORMATTED per als valors mensuals numèrics
+    # (evita que Sheets els retorni com a serials de data o amb coma decimal).
     fmt = service.spreadsheets().values().get(
         spreadsheetId=SHEET_ID, range="Indicadors!C3:U30",
         valueRenderOption="FORMATTED_VALUE",
@@ -345,7 +345,7 @@ def kpi_card(label: str, value: str, sub: str = "", accent: str = ACCENT) -> str
 
 
 def status_badge(estat: str) -> str:
-    cls = {"Pendent": "status-pendent", "En proces": "status-en-proces", "Fet": "status-fet"}[estat]
+    cls = {"Pendent": "status-pendent", "En procés": "status-en-proces", "Fet": "status-fet"}[estat]
     return f'<span class="status-badge {cls}">{STATUS_LABEL[estat]}</span>'
 
 
@@ -354,7 +354,7 @@ def section_title(text: str):
 
 
 def _clicked_categories(event: dict | None) -> list:
-    """Extreu les categories (eix Y) clicades d'un event on_select de plotly_chart."""
+    """Extreu les categories (eix Y) clicades d'un esdeveniment on_select de plotly_chart."""
     if not event:
         return []
     points = event.get("selection", {}).get("points", [])
@@ -363,10 +363,10 @@ def _clicked_categories(event: dict | None) -> list:
 
 def sync_chart_click_to_filter(event_key: str, filter_key: str, fp_key: str):
     """Si l'usuari acaba de clicar una barra al gràfic `event_key`, sobreescriu
-    l'estat del multiselect `filter_key` amb aquesta selecció, ABANS de que es
-    dibuixi el widget. Nomes actua quan la seleccio del grafic ha canviat des de
-    l'ultim cop (comparant `fp_key`), per no xafar una edicio manual posterior
-    del multiselect fet per l'usuari."""
+    l'estat del multiselect `filter_key` amb aquesta selecció, ABANS que es
+    dibuixi el widget. Només actua quan la selecció del gràfic ha canviat des de
+    l'últim cop (comparant `fp_key`), per no trepitjar una edició manual posterior
+    del multiselect feta per l'usuari."""
     event = st.session_state.get(event_key)
     clicked = _clicked_categories(event)
     fingerprint = tuple(clicked)
@@ -459,17 +459,17 @@ def chart_per_proposta(tasques: list, highlight: list | None = None) -> go.Figur
     props = sorted({t["proposta"] for t in tasques})
     highlight = highlight or []
     avg = [sum(t["progres"] for t in tasques if t["proposta"] == p) / max(1, sum(1 for t in tasques if t["proposta"] == p)) * 100 for p in props]
-    colors = [GOOD if a >= 100 else (STATUS_COLOR["En proces"] if a > 0 else STATUS_COLOR["Pendent"]) for a in avg]
+    colors = [GOOD if a >= 100 else (STATUS_COLOR["En procés"] if a > 0 else STATUS_COLOR["Pendent"]) for a in avg]
     opacity = [1.0 if (not highlight or p in highlight) else 0.3 for p in props]
     # Nota: NO es pot fer servir `text`/`textfont` en aquesta traça (bar amb on_select
-    # actiu) — Streamlit intenta llegir `trace.textfont` en aplicar l'estil de seleccio
-    # i crasheja si la traça no en te un de complet, aixo bloqueja per complet el clic.
-    # Les etiquetes de percentatge es dibuixen com annotations (figura), no com a text
+    # actiu) — Streamlit intenta llegir `trace.textfont` en aplicar l'estil de selecció
+    # i falla si la traça no en té un de complet, cosa que bloqueja per complet el clic.
+    # Les etiquetes de percentatge es dibuixen com a annotations (figura), no com a text
     # de la traça, per evitar aquest camí de codi.
     fig = go.Figure(go.Bar(
         x=avg, y=props, orientation="h",
         marker=dict(color=colors, opacity=opacity),
-        hovertemplate="%{y}<br>Progres mitja: %{x:.0f}%<extra></extra>",
+        hovertemplate="%{y}<br>Progrés mitjà: %{x:.0f}%<extra></extra>",
     ))
     for p, a in zip(props, avg):
         fig.add_annotation(
@@ -590,7 +590,7 @@ def indicador_card_html(ind: dict, months: list) -> str:
 # ─── SIDEBAR ────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("### 🩺 Lin Barcelona")
-    st.caption("Panel de seguiment Lean")
+    st.caption("Panell de seguiment Lean")
     if st.button("🔄 Refrescar dades", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
@@ -600,9 +600,9 @@ cronograma = fetch_cronograma()
 indicadors_data = fetch_indicadors()
 tasques = cronograma["tasques"]
 
-# Si l'ultim clic de l'usuari va ser sobre una barra dels grafics de desglossament
-# (mes avall a la pagina), aixo actualitza el filtre corresponent ABANS de dibuixar
-# els widgets del sidebar — aixi els grafics fan tambe de selector interactiu.
+# Si l'últim clic de l'usuari va ser sobre una barra dels gràfics de desglossament
+# (més avall a la pàgina), això actualitza el filtre corresponent ABANS de dibuixar
+# els widgets del sidebar — així els gràfics fan també de selector interactiu.
 st.session_state.setdefault("filt_resp", [])
 st.session_state.setdefault("filt_prop", [])
 sync_chart_click_to_filter("chart_responsable", "filt_resp", "_fp_resp")
@@ -610,9 +610,9 @@ sync_chart_click_to_filter("chart_proposta", "filt_prop", "_fp_prop")
 
 def _netejar_filtres():
     # Un widget amb key= no es pot reassignar via session_state un cop ja instanciat
-    # en aquest mateix run (StreamlitWidgetAlreadyInstantiatedError). Un callback
+    # en aquesta mateixa execució (StreamlitWidgetAlreadyInstantiatedError). Un callback
     # on_click s'executa ABANS que el script es torni a dibuixar, així que aquí sí
-    # és segur mutar l'estat: el multiselect encara no s'ha instanciat per aquest run.
+    # és segur mutar l'estat: el multiselect encara no s'ha instanciat en aquesta execució.
     st.session_state["filt_resp"] = []
     st.session_state["filt_prop"] = []
     st.session_state["_fp_resp"] = ()
@@ -633,7 +633,7 @@ with st.sidebar:
     st.caption("💡 També pots fer clic a una barra dels gràfics de desglossament per filtrar.")
     st.button("✖ Netejar filtres", use_container_width=True, on_click=_netejar_filtres)
 
-# Cap seleccio = sense filtre (mostra tot); es el comportament "Tots" per defecte.
+# Cap selecció = sense filtre (mostra tot); és el comportament "Tots" per defecte.
 actius_resp = filt_resp or responsables
 actius_prop = filt_prop or propostes
 tasques_filtrades = [t for t in tasques if t["responsable"] in actius_resp and t["proposta"] in actius_prop]
@@ -643,7 +643,7 @@ TODAY = date.today()
 
 total_accions = len(tasques)
 completades = sum(1 for t in tasques if t["estat"] == "Fet")
-en_curs = sum(1 for t in tasques if t["estat"] == "En proces")
+en_curs = sum(1 for t in tasques if t["estat"] == "En procés")
 pendents = sum(1 for t in tasques if t["estat"] == "Pendent")
 endarrerides = sum(1 for t in tasques if is_overdue(t, TODAY))
 progres_global = (sum(t["progres"] for t in tasques) / total_accions * 100) if total_accions else 0
@@ -658,7 +658,7 @@ st.markdown(
     f'<div class="dash-header">'
     f'<div><div class="dash-title">{cronograma["titol"]}</div>'
     f'<div class="dash-subtitle">Lin Barcelona · Metodologia Lean aplicada a salut</div></div>'
-    f'<div class="dash-period">Progres global · {progres_global:.0f}%</div>'
+    f'<div class="dash-period">Progrés global · {progres_global:.0f}%</div>'
     f'</div>', unsafe_allow_html=True,
 )
 
@@ -686,7 +686,7 @@ with c1:
 with c2:
     st.markdown(kpi_card("Fetes", str(completades), f"{completades/total_accions*100:.0f}% del total" if total_accions else "—", accent=STATUS_COLOR["Fet"]), unsafe_allow_html=True)
 with c3:
-    st.markdown(kpi_card("En proces", str(en_curs), f"{en_curs/total_accions*100:.0f}% del total" if total_accions else "—", accent=STATUS_COLOR["En proces"]), unsafe_allow_html=True)
+    st.markdown(kpi_card("En procés", str(en_curs), f"{en_curs/total_accions*100:.0f}% del total" if total_accions else "—", accent=STATUS_COLOR["En procés"]), unsafe_allow_html=True)
 with c4:
     st.markdown(kpi_card("Pendents", str(pendents), f"{pendents/total_accions*100:.0f}% del total" if total_accions else "—", accent=STATUS_COLOR["Pendent"]), unsafe_allow_html=True)
 with c5:
@@ -712,15 +712,15 @@ for t in sorted(tasques_filtrades, key=lambda t: (t["inici"] or date.max)):
     )
 st.markdown(
     '<div class="styled-table-wrap"><table class="custom">'
-    '<tr><th>Proposta de millora</th><th>Accio</th><th>Responsable</th><th>Estat</th><th>Inici</th><th>Fi</th><th>Alerta</th></tr>'
+    '<tr><th>Proposta de millora</th><th>Acció</th><th>Responsable</th><th>Estat</th><th>Inici</th><th>Fi</th><th>Alerta</th></tr>'
     f'{rows_html}</table></div>', unsafe_allow_html=True,
 )
 
 st.markdown('<hr class="divider">', unsafe_allow_html=True)
 
 # ─── DESGLOSSAMENT ──────────────────────────────────────────────────────────────
-# Aquests dos grafics mostren sempre TOTES les accions (no nomes les filtrades) perque
-# fan tambe de selector interactiu: clicar una barra filtra el Gantt i la taula de dalt.
+# Aquests dos gràfics mostren sempre TOTES les accions (no només les filtrades) perquè
+# fan també de selector interactiu: clicar una barra filtra el Gantt i la taula de dalt.
 col_resp, col_prop = st.columns(2, gap="large")
 with col_resp:
     section_title("Desglossament per responsable · clica una barra per filtrar")
@@ -729,7 +729,7 @@ with col_resp:
         config=_NO_INTERACT, on_select="rerun", selection_mode="points", key="chart_responsable",
     )
 with col_prop:
-    section_title("Progres per proposta de millora · clica una barra per filtrar")
+    section_title("Progrés per proposta de millora · clica una barra per filtrar")
     st.plotly_chart(
         chart_per_proposta(tasques, highlight=filt_prop), use_container_width=True,
         config=_NO_INTERACT, on_select="rerun", selection_mode="points", key="chart_proposta",
@@ -740,7 +740,7 @@ st.markdown('<hr class="divider">', unsafe_allow_html=True)
 # ─── INDICADORS ─────────────────────────────────────────────────────────────────
 section_title("Indicadors del projecte")
 if indicadors_data["actualitzat"]:
-    st.caption(f'Ultima actualitzacio de dades: {indicadors_data["actualitzat"]}')
+    st.caption(f'Última actualització de dades: {indicadors_data["actualitzat"]}')
 
 months = indicadors_data["months"]
 indicadors = indicadors_data["indicadors"]
