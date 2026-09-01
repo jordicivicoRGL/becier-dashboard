@@ -353,6 +353,28 @@ def section_title(text: str):
     st.markdown(f'<div class="section-title"><span class="dot"></span>{text}</div>', unsafe_allow_html=True)
 
 
+def _clicked_categories(event: dict | None) -> list:
+    """Extreu les categories (eix Y) clicades d'un event on_select de plotly_chart."""
+    if not event:
+        return []
+    points = event.get("selection", {}).get("points", [])
+    return sorted({p.get("y") for p in points if p.get("y") is not None})
+
+
+def sync_chart_click_to_filter(event_key: str, filter_key: str, fp_key: str):
+    """Si l'usuari acaba de clicar una barra al gràfic `event_key`, sobreescriu
+    l'estat del multiselect `filter_key` amb aquesta selecció, ABANS de que es
+    dibuixi el widget. Nomes actua quan la seleccio del grafic ha canviat des de
+    l'ultim cop (comparant `fp_key`), per no xafar una edicio manual posterior
+    del multiselect fet per l'usuari."""
+    event = st.session_state.get(event_key)
+    clicked = _clicked_categories(event)
+    fingerprint = tuple(clicked)
+    if st.session_state.get(fp_key) != fingerprint:
+        st.session_state[filter_key] = clicked
+        st.session_state[fp_key] = fingerprint
+
+
 def render_disclaimers():
     st.markdown(
         '<div class="disclaimer-strip">'
@@ -409,14 +431,16 @@ def chart_gantt(tasques: list, today: date) -> go.Figure:
     return fig
 
 
-def chart_per_responsable(tasques: list) -> go.Figure:
+def chart_per_responsable(tasques: list, highlight: list | None = None) -> go.Figure:
     resp_order = sorted({t["responsable"] for t in tasques})
+    highlight = highlight or []
+    opacity = [1.0 if (not highlight or r in highlight) else 0.3 for r in resp_order]
     fig = go.Figure()
     for estat in STATUS_ORDER:
         counts = [sum(1 for t in tasques if t["responsable"] == r and t["estat"] == estat) for r in resp_order]
         fig.add_trace(go.Bar(
             y=resp_order, x=counts, orientation="h", name=STATUS_LABEL[estat],
-            marker=dict(color=STATUS_COLOR[estat]),
+            marker=dict(color=STATUS_COLOR[estat], opacity=opacity),
         ))
     fig.update_layout(
         barmode="stack",
@@ -431,16 +455,27 @@ def chart_per_responsable(tasques: list) -> go.Figure:
     return fig
 
 
-def chart_per_proposta(tasques: list) -> go.Figure:
+def chart_per_proposta(tasques: list, highlight: list | None = None) -> go.Figure:
     props = sorted({t["proposta"] for t in tasques})
+    highlight = highlight or []
     avg = [sum(t["progres"] for t in tasques if t["proposta"] == p) / max(1, sum(1 for t in tasques if t["proposta"] == p)) * 100 for p in props]
     colors = [GOOD if a >= 100 else (STATUS_COLOR["En proces"] if a > 0 else STATUS_COLOR["Pendent"]) for a in avg]
+    opacity = [1.0 if (not highlight or p in highlight) else 0.3 for p in props]
+    # Nota: NO es pot fer servir `text`/`textfont` en aquesta traça (bar amb on_select
+    # actiu) — Streamlit intenta llegir `trace.textfont` en aplicar l'estil de seleccio
+    # i crasheja si la traça no en te un de complet, aixo bloqueja per complet el clic.
+    # Les etiquetes de percentatge es dibuixen com annotations (figura), no com a text
+    # de la traça, per evitar aquest camí de codi.
     fig = go.Figure(go.Bar(
         x=avg, y=props, orientation="h",
-        marker=dict(color=colors),
-        text=[f"{a:.0f}%" for a in avg], textposition="outside",
+        marker=dict(color=colors, opacity=opacity),
         hovertemplate="%{y}<br>Progres mitja: %{x:.0f}%<extra></extra>",
     ))
+    for p, a in zip(props, avg):
+        fig.add_annotation(
+            x=a, y=p, text=f"{a:.0f}%", showarrow=False,
+            xanchor="left", xshift=6, font=dict(color="#c8cce0", size=11),
+        )
     fig.update_layout(
         height=max(240, 50 * len(props) + 60),
         margin=dict(l=10, r=30, t=10, b=10),
@@ -565,17 +600,38 @@ cronograma = fetch_cronograma()
 indicadors_data = fetch_indicadors()
 tasques = cronograma["tasques"]
 
+# Si l'ultim clic de l'usuari va ser sobre una barra dels grafics de desglossament
+# (mes avall a la pagina), aixo actualitza el filtre corresponent ABANS de dibuixar
+# els widgets del sidebar — aixi els grafics fan tambe de selector interactiu.
+st.session_state.setdefault("filt_resp", [])
+st.session_state.setdefault("filt_prop", [])
+sync_chart_click_to_filter("chart_responsable", "filt_resp", "_fp_resp")
+sync_chart_click_to_filter("chart_proposta", "filt_prop", "_fp_prop")
+
+def _netejar_filtres():
+    # Un widget amb key= no es pot reassignar via session_state un cop ja instanciat
+    # en aquest mateix run (StreamlitWidgetAlreadyInstantiatedError). Un callback
+    # on_click s'executa ABANS que el script es torni a dibuixar, així que aquí sí
+    # és segur mutar l'estat: el multiselect encara no s'ha instanciat per aquest run.
+    st.session_state["filt_resp"] = []
+    st.session_state["filt_prop"] = []
+    st.session_state["_fp_resp"] = ()
+    st.session_state["_fp_prop"] = ()
+
+
 with st.sidebar:
     responsables = sorted({t["responsable"] for t in tasques})
     propostes = sorted({t["proposta"] for t in tasques})
     filt_resp = st.multiselect(
-        "Responsable", responsables, default=[],
+        "Responsable", responsables, key="filt_resp",
         placeholder="Tots els responsables",
     )
     filt_prop = st.multiselect(
-        "Proposta de millora", propostes, default=[],
+        "Proposta de millora", propostes, key="filt_prop",
         placeholder="Totes les propostes",
     )
+    st.caption("💡 També pots fer clic a una barra dels gràfics de desglossament per filtrar.")
+    st.button("✖ Netejar filtres", use_container_width=True, on_click=_netejar_filtres)
 
 # Cap seleccio = sense filtre (mostra tot); es el comportament "Tots" per defecte.
 actius_resp = filt_resp or responsables
@@ -663,13 +719,21 @@ st.markdown(
 st.markdown('<hr class="divider">', unsafe_allow_html=True)
 
 # ─── DESGLOSSAMENT ──────────────────────────────────────────────────────────────
+# Aquests dos grafics mostren sempre TOTES les accions (no nomes les filtrades) perque
+# fan tambe de selector interactiu: clicar una barra filtra el Gantt i la taula de dalt.
 col_resp, col_prop = st.columns(2, gap="large")
 with col_resp:
-    section_title("Desglossament per responsable")
-    st.plotly_chart(chart_per_responsable(tasques_filtrades), use_container_width=True, config=_NO_INTERACT)
+    section_title("Desglossament per responsable · clica una barra per filtrar")
+    st.plotly_chart(
+        chart_per_responsable(tasques, highlight=filt_resp), use_container_width=True,
+        config=_NO_INTERACT, on_select="rerun", selection_mode="points", key="chart_responsable",
+    )
 with col_prop:
-    section_title("Progres per proposta de millora")
-    st.plotly_chart(chart_per_proposta(tasques_filtrades), use_container_width=True, config=_NO_INTERACT)
+    section_title("Progres per proposta de millora · clica una barra per filtrar")
+    st.plotly_chart(
+        chart_per_proposta(tasques, highlight=filt_prop), use_container_width=True,
+        config=_NO_INTERACT, on_select="rerun", selection_mode="points", key="chart_proposta",
+    )
 
 st.markdown('<hr class="divider">', unsafe_allow_html=True)
 
