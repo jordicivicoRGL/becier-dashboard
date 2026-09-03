@@ -1,0 +1,25 @@
+28	Mi gato tiene el pelo apagado y se le nota reseca la piel.	¿Tu gato tiene el pelo sin brillo y se rasca más de lo normal?
+29	Mi gato tiene el pelo apagado y se le nota reseca la piel.	El pelo y la piel son el primer síntoma visible de una mala alimentación.
+30	Mi gato tiene el pelo apagado y se le nota reseca la piel.	Este es el pelo de un gato a las 3 semanas de cambiar su comida.
+31	Mi gato tiene el pelo apagado y se le nota reseca la piel.	Llevaba meses probando champús para gatos y el problema no era el pelo, era el pienso.
+32	Mi gato tiene el pelo apagado y se le nota reseca la piel.	¿Ves pelo de tu gato por todas partes? La comida natural puede ser la solución al problema
+33	Quiero darle algo natural pero no tengo tiempo de cocinarle nada.	¿No tienes tiempo de cocinarle a tu gato, pero tampoco quieres darle cualquier cosa?
+34	Quiero darle algo natural pero no tengo tiempo de cocinarle nada.	¿Quieres darle algo casero a tu gato, pero no tienes tiempo de cocinar?
+35	Mi gato es muy especial con la comida, no sé si se la va a comer.	Mi gato dejaba el plato a medias con todo... hasta que probó esto.
+36	Mi gato es muy especial con la comida, no sé si se la va a comer.	¿Tu gato es especial con la comida?
+37	Mi gato es muy especial con la comida, no sé si se la va a comer.	Los gatos rechazan la comida nueva por el olfato, no por capricho.
+38	Mi gato es muy especial con la comida, no sé si se la va a comer.	¿Nunca sabes si tu gato va a comerse la comida?
+39	Mi gato es muy especial con la comida, no sé si se la va a comer.	¿Tu gato siempre deja el plato a medias?
+40	No sé cuánto pienso está comiendo realmente ni si es la cantidad correcta.	¿Sabes realmente cuánto come tu gato al día?
+41	Me preocupa que algo natural no cubra todo lo que mi gato necesita.	¿Crees que la comida natural no cubre todo lo que necesita tu gato?
+42	Me preocupa el proceso de cambiarle la comida, no sé cómo hacerlo bien.	Así se cambia la comida de un gato sin que la rechace.
+43	Me preocupa el proceso de cambiarle la comida, no sé cómo hacerlo bien.	¿Te da miedo cambiarle la comida a tu gato por si la rechaza?
+44	Me preocupa el proceso de cambiarle la comida, no sé cómo hacerlo bien.	Sabemos que los gatos odian el cambio, por eso diseñamos la transición pensando en ellos.
+45	Siento que el pienso de toda la vida es solo comida industrial.	¿Crees que el pienso para gatos es demasiado industrial y te gustaría darle algo mejor?
+46	Siento que el pienso de toda la vida es solo comida industrial.	Dejé de sentirme culpable en cuanto vi lo que llevaba de verdad su comida.
+47	Las heces de mi gato no tienen buena pinta y el olor es muy fuerte.	Las heces de tu gato dicen mucho más de lo que crees sobre su comida.
+48	Las heces de mi gato no tienen buena pinta y el olor es muy fuerte.	¿Las heces de tu gato no son como deberian?
+49	Las heces de mi gato no tienen buena pinta y el olor es muy fuerte.	¿Las heces de tu gato huelen demasiado fuerte?
+50	Sé que mi gato bebe poca agua pero no sé si es un riesgo real.	¿Sabías que los gatos apenas beben agua por instinto? Por eso la hidratación tiene que venir también de la comida.
+51	Sé que mi gato bebe poca agua pero no sé si es un riesgo real.	¿Tu gato no toca el bebedero y te preocupa su hidratación?
+52	Me pregunto si vale la pena pagar más por algo natural.	Comparado con el pienso, cuesta más al mes. Comparado con lo que hay dentro, compras otra cosa.

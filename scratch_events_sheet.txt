@@ -1,0 +1,31 @@
+
+GA4 — eventos automáticos (medición mejorada), propiedad dcore.es (G-LKG6KEHBKP)
+Evento | Meta | Google | TikTok | Medición | Fuente | Notas
+page_view | FALSE | TRUE | FALSE | Carga de página. Automático. | GA4 nativo | 7.671 eventos (27 jul-23 ago)
+session_start | FALSE | TRUE | FALSE | Inicio de sesión. Automático. | GA4 nativo | 2.597 eventos
+first_visit | FALSE | TRUE | FALSE | Primera visita del usuario. Automático. | GA4 nativo | 1.936 eventos
+user_engagement | FALSE | TRUE | FALSE | Tiempo de interacción con la página. Automático. | GA4 nativo | 2.275 eventos
+scroll | FALSE | TRUE | FALSE | Scroll >90% de la página. Automático. | GA4 nativo | 501 eventos
+click | FALSE | TRUE | FALSE | Clic en enlace saliente. Automático. | GA4 nativo | 49 eventos
+form_start | FALSE | TRUE | FALSE | Interacción con un formulario. Una vez por sesión. EVENTO CLAVE. | GA4 nativo | 499 eventos / 388 usuarios. Marcado como evento clave en GA4.
+form_submit | FALSE | TRUE | FALSE | Envío de un formulario que pasa la validación básica de GA4. EVENTO CLAVE. | GA4 nativo | 330 eventos / 120 usuarios. Marcado como evento clave en GA4. Importado a Ads pero OCULTO ('dcore.es (web) form_submit', HIDDEN, primary=False) → no se usa en optimización.
+purchase | FALSE | TRUE | FALSE | Evento estándar de ecommerce. Definido pero sin datos (DCORE no vende online). | GA4 nativo | 0 eventos. No es evento clave. Importado a Ads pero oculto y sin uso.
+
+GTM (GTM-TG55B388) — eventos custom hacia GA4 / plataformas
+Evento | Meta | Google | TikTok | Medición | Fuente | Notas
+Form Send |  | TRUE |  | Tag 'Form Send 2 GA' (GA4 evento). Trigger 'Form Send' = Envío de formulario, SIN filtro (cualquier formulario, sin esperar validación). Por eso cuenta más que form_submit. | GTM → GA4 | 442 eventos / 203 usuarios. NO es evento clave en GA4 ahora mismo, pero SÍ está activa como conversión Principal en Google Ads (163,50 conv en PMAX). Tag modificada hace 4h (revisar qué cambió).
+GA PV (page_view) |  | TRUE |  | Tag 'GA PV', evento GA4 manual disparado por trigger 'PageView' propio de GTM. | GTM → GA4 | Duplica funcionalmente el page_view automático nativo de GA4 (fila 4). Revisar si sigue siendo necesario.
+Conversión Google Ads (gtag) |  | TRUE |  | Tag 'Form conversion G.ads 2'. Conversion ID 10814118154 / label sUeRCJOtnb4ZEIqyyaQo. Trigger 'Thank You Page' = vista de página con URL que CONTIENE 'gracias'. | GTM → Ads (directo) | Coincide con /gracias/ Y /lp15/gracias a la vez (lp15/gracias redirige a gracias/) → riesgo de disparo doble en la misma sesión.
+Linker G.Ads |  | TRUE |  | Tag de vinculación de conversiones (gclid). Mismo trigger 'Thank You Page'. | GTM | No es un evento de conversión en sí, solo enlaza clics con conversiones.
+FB Pixel / Facebook Conversion Linker | TRUE |  |  | Tags de Meta Pixel. Triggers 'All Pages' y 'Form Send FB'. | GTM → Meta | Aparecen PAUSADAS en GTM (icono de pausa). Coherente con que Meta Ads no tiene tráfico activo a la web ahora mismo (todo Lead Ads nativo).
+
+Google Ads — acciones de conversión (cuenta 182-915-0362)
+Evento | Meta | Google | TikTok | Medición | Fuente | Notas
+Form send | FALSE | TRUE | FALSE | Importada desde GA4 (evento custom 'Form Send'). ENABLED, Primary. | GA4→Ads (import) | 163,50 conv en PMAX (1-23 ago). Basada en un evento que ya NO es clave en GA4 → conversión huérfana, revisar si sigue recibiendo datos nuevos.
+Envío de formulario... (lp15/gracias) | FALSE | TRUE | FALSE | Auto-detectada por Google Ads (webpage_codeless) a partir del Google Tag base. ENABLED, Primary. | Ads (auto, page load) | 10,00 conv. Landing antigua en desuso que redirige a /gracias/. Candidata a eliminar.
+Registro (gracias/) | FALSE | TRUE | FALSE | Auto-detectada por Google Ads (webpage_codeless). ENABLED, Primary. | Ads (auto, page load) | 3,00 conv. Página de gracias actual. Posible doble conteo con la anterior si ambas cargan en la misma sesión.
+Lead (Thank you page) | FALSE | TRUE | FALSE | Auto-detectada por Google Ads (webpage_codeless), categoría SIGNUP. ENABLED, Primary. | Ads (auto, page load) | Otra conversión activa de tipo lead a nivel de cuenta, no vista aún a nivel de campaña PMAX. Revisar solapamiento con las anteriores.
+Formulario de contacto - Enviar | FALSE | TRUE | FALSE | Lead Ads nativo de Google (formulario dentro del propio anuncio, sin salir a la web). ENABLED, Primary. | Google Hosted | No relacionado con la web ni con GA4/GTM.
+Calls from ads | FALSE | TRUE | FALSE | Llamadas iniciadas desde el anuncio. | Ads nativo | ENABLED, Primary.
+dcore.es (web) form_submit [OCULTA] | FALSE | TRUE | FALSE | Importación automática desde GA4 del evento clave form_submit. | GA4→Ads (import) | HIDDEN, primary=False. Es la más fiable de todas pero no se usa para nada en la cuenta ahora mismo.
+6 acciones eliminadas (histórico) | FALSE | TRUE | FALSE | Formulario, Lead, Lead (1), Lead (2), Registro Gracias, Envío de formulario (gracias, versión antigua). | — | REMOVED. No afectan a las métricas actuales pero ensucian la vista de la cuenta.

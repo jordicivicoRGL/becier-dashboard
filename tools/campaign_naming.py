@@ -47,9 +47,17 @@ GOOGLE_CAMPAIGN_TYPES = {"SEARCH", "DISPLAY", "SHOPPING", "PMAX", "VIDEO",
 # con formulario instantáneo nativo puede salir como "lead" o como
 # "onsite_conversion.lead_grouped"). Probar en orden y quedarse con la primera que exista
 # evita reportar "0 resultados" por una clave equivocada en vez de por rendimiento real.
+#
+# Importante: varias campañas con sufijo "_LE" (nominalmente "Landing") en realidad
+# tienen el adset configurado con optimization_goal=OFFSITE_CONVERSIONS y un evento de
+# píxel "LEAD" (confirmado en AVIS-BECAR_LE y BECSER_LE) — el nombre de la campaña no
+# refleja el objetivo real de optimización. Por eso "offsite_conversion.fb_pixel_lead"
+# va ANTES que "landing_page_view": si existe un lead real por píxel, es la métrica que
+# de verdad importa; landing_page_view (simple vista de página) solo se usa como fallback
+# para campañas de tráfico genuinas que no tienen píxel de lead (ej. TRAFIC-WEB).
 OBJETIVO_ACTION_TYPE = {
     "Lead Ad":     ["lead", "onsite_conversion.lead_grouped", "onsite_conversion.lead"],
-    "Landing":     ["landing_page_view", "link_click"],
+    "Landing":     ["offsite_conversion.fb_pixel_lead", "lead", "landing_page_view", "link_click"],
     "Impresiones": [],  # objetivo de alcance/impresiones no tiene action_type de resultado
     "Seguidores":  [],  # captación de seguidores no tiene action_type de resultado comparable
 }

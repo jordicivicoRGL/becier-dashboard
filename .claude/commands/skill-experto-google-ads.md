@@ -105,6 +105,8 @@ Campaña
 - Desactivar la Red de Display a menos que Jordi lo pida explícitamente
 - Desactivar ubicaciones de búsqueda de partners (salvo presupuesto amplio)
 
+⚠️ Alpha en pruebas (rollout limitado, no disponible en todas las cuentas): Google está probando en Performance Max dos checkboxes (activados por defecto) para excluir la Red de Socios de Búsqueda y la Red de Display. Si el cliente tiene acceso a esta alpha, aplicar el mismo criterio ya vigente para Search (desactivar Red de Display salvo justificación) también dentro de PMax, revisando ambos checkboxes al configurar la campaña.
+
 ### Estrategia de puja
 
 | Situación | Estrategia recomendada |
@@ -117,6 +119,13 @@ Campaña
 Justifica siempre la estrategia elegida según el historial de la cuenta.
 
 ⚠️ Revisar antes del 17/08/2026: en cuentas con campañas Target CPA/ROAS marcadas como "Limitada por presupuesto", Google empezará a acercar la entrega al target real. Antes de esa fecha, usar el Bid Target Adjustment Tool (disponible en la cuenta desde el 6/07/2026) para revisar el rendimiento histórico y decidir si el target o el presupuesto actual siguen siendo razonables. (Retirar esta nota pasada esa fecha.)
+
+⚠️ Cambio de nomenclatura en la interfaz: "Maximizar conversiones con CPA objetivo" pasa a llamarse "CPA objetivo" y "Maximizar valor de conversión con ROAS objetivo" pasa a "ROAS objetivo", mostrándose como estrategias independientes en vez de como opción dentro de Maximizar conversiones/valor. El comportamiento interno no cambia; es solo un rebautizo en el panel, parte del mismo paquete de cambios del 17/08/2026.
+
+### Performance Max y Shopping
+
+- **AI Max para Shopping:** capa opcional de IA sobre campañas Shopping Standard ya existentes (activación en 1 clic, sin migrar a PMax). Mantiene segmentación, pujas y exclusiones de marca, y añade personalización de texto de anuncio, expansión de URL final y selección automática de formato (texto vs Shopping). Cuando el cliente ya tenga Shopping Standard funcionando bien y quiera más alcance sin perder control, evaluar activar AI Max para Shopping antes de saltar a PMax completo.
+- ⚠️ Alpha sin anuncio oficial: se ha detectado en algunas campañas Performance Max un control a nivel de campaña con exclusión por 7 tramos de renta familiar. Google no lo ha confirmado ni ha dado fecha de disponibilidad general — no dar por hecho que está disponible en las cuentas de clientes.
 
 ### Palabras clave
 
@@ -137,7 +146,7 @@ Propone siempre una lista inicial de **palabras clave negativas** según el sect
 | Llamada | Cuando el objetivo incluye llamadas |
 | Ubicación | Cuando hay local físico |
 | Precio | Cuando hay productos o servicios con precio fijo |
-| Formulario de cliente potencial | Cuando el objetivo es captación de leads directa |
+| Formulario de cliente potencial | Cuando el objetivo es captación de leads directa. Elegibilidad real: más de $1.000 gastados en la cuenta (o $15.000 agregados en todas las cuentas del MCC) + Verificación de Anunciante completada — el antiguo requisito de $50.000 de gasto ya no aplica. Zapier es un método oficial de entrega de leads: valorarlo con clientes que usen esa herramienta en su CRM |
 
 ### Configuración de ubicación
 
@@ -301,3 +310,4 @@ Si en la sesión has recopilado información nueva y útil sobre el cliente, gu�
 ## Notas operativas vigentes
 
 - **Passkey obligatoria (desde 15/07/2026):** añadir usuarios, cambiar accesos, modificar facturación o vincular cuentas en Google Ads ahora exige passkey, con una demora de seguridad de hasta 7 días tras configurar una passkey nueva. Tenlo en cuenta al gestionar altas/bajas de acceso de clientes o del equipo.
+- **Passkey obligatoria para API/Scripts/Editor (desde 5/08/2026):** exigencia distinta a la anterior. Afecta a la generación de nuevos tokens OAuth para Google Ads API, Google Ads Editor, Google Ads Scripts, BigQuery Data Transfer Service y Data Studio. Las cuentas de servicio están exentas y los tokens ya existentes siguen funcionando sin reautorizar. Misma demora de seguridad de hasta 7 días tras crear una passkey nueva. Relevante si gestionamos integraciones, scripts o herramientas de reporting conectadas vía API para algún cliente.

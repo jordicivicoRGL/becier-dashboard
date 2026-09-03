@@ -1,0 +1,19 @@
+--- TABLE at content idx 5, startIndex 144 ---
+ | Anuncio | De qé trata | Coste | Leads | CPL | CTR | Hook Rate | Hold Rate
+ | Copy of SUBVENCIONES REDES MAD PROS REFORMAS B2C MAX VOLUMEN | Hablando a cámara en la calle: Ahorrar más de 15.000€ en tu reforma gracias a las subvenciones del estado | 1.028,33€ | 42 | 24,48€ | 1,62% | 35,42% | 20,30%
+ | CHALET VERANO MAD PROS REFORMAS B2C MAX VOLUMEN | Hablando a cámara en un chalet: Reformar el chalet en verano mientras el dueño disfruta de sus vacaciones | 200,68€ | 7 | 28,67€ | 0,95% | 42,54% | 15,91%
+ | DETALLADO-Campaña presupuesto detallado.MOV MAD PROS REFORMAS B2C MAX VOLUMEN | Hablando a cámara en la oficina: que en Dcore se entregan los presupuestos detallados partida por partida. Además, teniendo estudio de arquitectura y constructora propia, nos permite tener precios competitivos | 3.136,29€ | 106 | 29,59€ | 0,79% | 19,27% | 16,68%
+ | SERVICIO EVO-EVO Lourdes .MOV ES PROS REFORMAS EVO | Tipo entrevista en la oficina: habla de improvisar durante la obra tiene un precio y acaba encareciendo la obra | 1.845,29€ | 54 | 34,17€ | 4,12% | 14,17% | 26,53%
+ | FALTA DE TIEMPO-Falta de tiempo para supervisar.MOV MAD PROS REFORMAS B2C MAX VOLUMEN | Hablando a cámara en la oficina: ¿No tienes tiempo de estar pendiente de la obra? Dcore se encarga de todo | 221,80€ | 5 | 44,36€ | 0,95% | 21,26% | 20,72%
+ | QUIERES REFORMAR HOY MISMO-5F59F4C6-5502-4C04-9EE6-8F5A09FCA741.mov MAD PROS REFORMAS B2C MAX VOLUMEN | Hablando a cámara en la oficina: habla del presupuesto detallado | 268,99€ | 5 | 53,80€ | 0,39% | 17,60% | 16,77%
+ | 24072026-CAMPAÑA COCINA VIDEO 2 FORMATO 2 MAD PROS REFORMAS B2C TIERS | Hablando a cámara en una cocina: si quieres reformar, te regalamos la cocina | 350,41€ | 6 | 58,40€ | 0,78% | 21,23% | 21,69%
+ | Copy of CHALET REDES MAD PROS REFORMAS B2C MAX VOLUMEN | Hablando en la calle: si un chalet vale mas de 5M de € no puedes reformarlo de cualquier manera. Dcore entiende de arquitectura y diseño y hace reformas de chalet a la altura. | 631,01€ | 10 | 63,10€ | 1,37% | 32,43% | 30,30%
+
+--- TABLE at content idx 25, startIndex 4458 ---
+ | Anuncio | De qé trata | Coste | Leads | CPL | CTR | Hook Rate | Hold Rate
+ | 9-16-VID-LIVING-Copy of LIVING CHECK PATI.mov MAD PROS LIVING | Hablando a cámara en la calle: pregunta si estás a punto de comprar tu casa y tienes dudas. Algo no te acaba de cuadrar… Tiene dudas de si podrá transformar la vivienda a su gusto y cuánto va a acostar. | 477,84€ | 25 | 19,11€ | 1,88% | 14,25% | 20,24%
+ | 9-16-VID-LIVING-0126 (5)(3).mov MAD PROS LIVING | Hablando a cámara en la obra: el mayor error al comprar un piso no es el precio, es no saber lo que estás comprando: habla de lo que es living check: análisis, problemas que pueden aparecer… | 476,57€ | 24 | 19,86€ | 0,98% | 9,36% | 17,18%
+ | 4-5-9-16-COCINA-VIDEO COCINA DCORE .mov MAD PROS COCINAS | Hablando a cámara desde la oficina: reforma hoy y la cocina de regalo. | 668,10€ | 22 | 30,37€ | 1,14% | 25,23% | 29,35%
+ | 9-16-VID-COCINAS-Campaña Cocinas.MOV MAD PROS COCINAS | Hablando a cámara en una casa: habla de la reforma en la cocina, de la complejidad de coordinar todas las empresas necesarias para que todo quede como quieres. En Dcore lo tienes todo en uno. | 332,52€ | 10 | 33,25€ | 1,00% | 31,85% | 29,42%
+ | 9-16-VID-LOCAL-Copy of VÍDEO FINAL ✅.mov MAD PROS B2B | Hablando a cámara en la calle: las 3 reformas que pueden arruinar la reforma de tu local:. | 861,40€ | 23 | 37,45€ | 2,27% | 15,62% | 29,02%
+

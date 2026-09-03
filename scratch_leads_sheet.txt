@@ -1,0 +1,6 @@
+Email | Telefono | Nombre | Fecha | Semana | Origen | Formulario | Campaña | Cierre | tour
+neirazurras@gmail.com | 34674455849 | Alberto Santos Garcimartin  | 2026-01-01 | 1 | meta_ads | Reformas Parciales | 9-16-VID-PRESUPUESTO-DETALLADO-copy_260E92CC-6808-4D84-AC81-DD1EB46A80C8.MOV | fake | NO
+mcastrod@gmail.com | 34686619515 | Marga De Castro  | 2026-01-01 | 1 | meta_ads | Reformas Integrales | 9-16-VID-TESTIMONIO-copy_7CDC2650-5680-4FC0-A6D8-FD5118B11E53.mov | unreachable | NO
+mrtdmng@gmail.com | 34609065195 | Marta De Mingo  | 2026-01-01 | 1 | meta_ads | Reformas Integrales | 9-16-VID-PREGUNTAS-REFORMAS-Preguntas reformas.MOV | unreachable | NO
+montsenuk@outlook.es | 34647878551 | Montse Barroso Trinidad  | 2026-01-01 | 1 | meta_ads | Reformas Parciales | 9-16-VID-DETALLADO-Campana presupuesto detallado.MOV | postponed | NO
+davidff1997@hotmail.com | 34648212887 | David Fernandez Fernandez  | 2026-01-01 | 1 | meta_ads | Reformas Parciales | 9-16-VID-REFORMAS-Procesando el video Campana reformas Preguntas.MOV | unreachable | NO

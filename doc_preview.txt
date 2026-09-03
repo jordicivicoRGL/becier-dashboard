@@ -1,0 +1,31 @@
+Ranking de creatividades — DCORE
+Periodo: 13 jul – 12 ago 2026    Filtro: anuncios activos, gasto ≥ 150€, campañas Lead Ad 
+
+Campañas REFORMAS
+[TABLA]
+Análisis de ángulos — REFORMAS
+Ahorro y subvenciones (beneficio económico concreto): ángulo con el mejor equilibrio de la cuenta — CPL más bajo con volumen real (24,48€ / 42 leads) y el segundo mejor hook rate (35,42%). Decir un ahorro concreto en euros, dicho en la calle, es el mensaje más rentable de todos.
+Presupuesto detallado / transparencia (racional): es el ángulo que más volumen aporta con diferencia — 111 leads combinados entre sus dos anuncios, con un CPL medio de ~30,7€. El hook rate es de los más bajos (17-19%), así que el enganche inicial es débil, pero el argumento racional convence a quien se queda a verlo. La ejecución importa mucho dentro del mismo ángulo: el CPL varía de 29,59€ a 53,80€ entre sus dos versiones.
+Servicio y gestión sin esfuerzo (evitar improvisar, ahorrar tiempo): el formato entrevista (Servicio EVO) genera el CTR más alto de toda la cuenta (4,12%, el resto ronda 1%), pero el hook rate es el más bajo (14,17%), por lo que el arranque del vídeo no retiene. 
+
+Anuncios con mejor Hook Rate
+Los 3 anuncios con mejor hook rate de la tabla REFORMAS, para revisar el vídeo y valorar qué hace que funcionen:
+Chalet verano — 42,54%
+Hook: “¡No puedo! ¡Con esta piscina aquí no se puede trabajar! ¿Te imaginas?” — afirmación directa enseñando la piscina, incitando al usuario a imaginarse la casa de ensueño: disfrutando con amigos, familia, en verano.
+Cómo adaptarlo: Que el usuario se imagine su piso/casa reformada a su gusto en una situación cotidiana “soñada”: disfrutando con amigos, trabajando en casa, en una oficina o salón de diseño…
+Subvenciones redes — 35,42%
+Hook: “¿Sabías que puedes ahorrarte más de 15.000€ en tu reforma?” — pregunta + cantidad alta de ahorro. Es el hook perfecto para esta situación (subvenciones del estado): capta la atención de inmediato.
+Cómo adaptarlo: Aplicarlo a las formas que tiene Dcore de ahorrar frente a otras empresas: presupuesto cerrado desde el primer día (sin sobrecostes ocultos), un mismo equipo lleva el proyecto (evita sobrecostes de subcontratas)…
+Chalet redes (+5M€) — 32,43%
+Hook: “Si tu chalet vale 2 millones de euros, no puedes reformarlo como un piso cualquiera.”
+Cómo adaptarlo: Parecido al chalet verano: mencionar una cantidad de dinero concreta en el hook retiene al usuario para ver qué hay después.
+
+Living, Cocinas y B2B
+[TABLA]
+Análisis de ángulos — Living, Cocinas y B2B
+Agrupando por ángulo o mensaje, esto es lo que mejor funciona en este bloque:
+•  Diagnóstico / riesgo oculto (Living Check): las dos versiones alertan de que comprar sin un diagnóstico previo puede salir caro ("algo no cuadra", "el mayor error no es el precio, es no saber lo que compras"). Es el ángulo con el CPL más bajo de toda la cuenta (19,11-19,86€, 24-25 leads cada uno), pero también el hook rate más bajo (9,36-14,25%) — el público que ve el anuncio probablemente ya está buscando comprar piso, así que convierte barato sin depender de enganchar con el vídeo. La ejecución sí importa: mismo ángulo, pero el hook cae a la mitad en la versión rodada en la obra frente a la de calle.
+•  Regalo / incentivo directo (cocina de regalo): mensaje simple de incentivo económico ("reforma hoy y la cocina de regalo"). Buen equilibrio: hook decente (25,23%) y el hold rate más alto del bloque (29,35%), con CPL medio (30,37€) y el volumen más alto de Cocinas (22 leads).
+•  Servicio integral / evitar la complejidad de coordinar (Campaña Cocinas): mensaje racional sobre no tener que coordinar tú mismo arquitecto, obra y proveedores ("en Dcore lo tienes todo en uno"). Es el anuncio con mejor hook rate de todo el bloque (31,85%) y buen hold (29,42%), aunque con menos volumen (10 leads) y el CPL más alto de Cocinas (33,25€) — engancha muy bien, pero le falta más inversión para confirmar si escala.
+•  Evitar errores / listicle de riesgos (B2B, "las 3 reformas que pueden arruinar tu local"): genera el CTR más alto del bloque (2,27%) — el formato lista despierta mucha curiosidad y clics — pero el hook rate es de los más bajos (15,62%), señal de que el titular atrae más que el propio arranque del vídeo. Es también el CPL más alto del bloque (37,45€): el clic es fácil de conseguir, la conversión a lead cuesta más.
+Ordenado por CPL ascendente (mejor a peor). Hook Rate = video views (3s) / impresiones · Hold Rate = ThruPlays / video views (3s).

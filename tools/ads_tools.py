@@ -7,8 +7,13 @@ LOGIN_CUSTOMER_ID = os.environ.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID")
 CUSTOMER_ID = os.environ.get("GOOGLE_ADS_CUSTOMER_ID")
 
 ACCOUNTS = {
-    "becier": "1632468817",
-    "diagonal": "1708585653",
+    "becier": "1632468817",       # Grup Becier Bona
+    "diagonal": "1708585653",     # BENITEZ GOMA (Diagonal CQ)
+    "dcore": "1829150362",        # Dcore Group
+    "properfy": "3929043521",     # Properfy
+    "tago": "2976338027",         # Client - Tago
+    "bloome": "4199711613",       # Bloome
+    "egos": "1547712696",         # Clínica EGOS 2024
 }
 
 
@@ -228,6 +233,385 @@ def create_campaign(name: str, daily_budget_eur: float, start_date: str = None, 
             "daily_budget_eur": daily_budget_eur,
             "status": "PAUSED"
         }
+
+    except GoogleAdsException as ex:
+        errors = [e.message for e in ex.failure.errors]
+        return {"error": f"Google Ads API error: {errors}"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def get_account_summary(date_range: str = "LAST_30_DAYS", account: str = "becier") -> dict:
+    """Resumen a nivel de cuenta: totales, nº de campañas activas, conversiones y coste por conversión."""
+    try:
+        client = _build_client()
+        ga_service = client.get_service("GoogleAdsService")
+        customer_id = ACCOUNTS.get(account.lower(), CUSTOMER_ID)
+
+        query = f"""
+            SELECT
+                customer.descriptive_name,
+                campaign.status,
+                metrics.impressions,
+                metrics.clicks,
+                metrics.cost_micros,
+                metrics.conversions,
+                metrics.conversions_value,
+                metrics.ctr
+            FROM campaign
+            WHERE segments.date DURING {date_range}
+        """
+        response = ga_service.search(customer_id=customer_id, query=query)
+
+        totals = {"impressions": 0, "clicks": 0, "cost_micros": 0, "conversions": 0.0, "conversions_value": 0.0}
+        active_campaigns = set()
+        account_name = None
+        for row in response:
+            account_name = row.customer.descriptive_name
+            if row.campaign.status.name == "ENABLED":
+                active_campaigns.add(row.campaign.id)
+            totals["impressions"] += row.metrics.impressions
+            totals["clicks"] += row.metrics.clicks
+            totals["cost_micros"] += row.metrics.cost_micros
+            totals["conversions"] += row.metrics.conversions
+            totals["conversions_value"] += row.metrics.conversions_value
+
+        cost_eur = round(totals["cost_micros"] / 1_000_000, 2)
+        conversions = round(totals["conversions"], 2)
+
+        return {
+            "account_name": account_name,
+            "period": date_range,
+            "active_campaigns": len(active_campaigns),
+            "impressions": totals["impressions"],
+            "clicks": totals["clicks"],
+            "cost_eur": cost_eur,
+            "ctr_pct": round((totals["clicks"] / totals["impressions"] * 100), 2) if totals["impressions"] else 0,
+            "conversions": conversions,
+            "conversions_value": round(totals["conversions_value"], 2),
+            "cost_per_conversion_eur": round(cost_eur / conversions, 2) if conversions else None,
+        }
+
+    except GoogleAdsException as ex:
+        errors = [e.message for e in ex.failure.errors]
+        return {"error": f"Google Ads API error: {errors}"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def get_ad_groups_stats(date_range: str = "LAST_30_DAYS", account: str = "becier", campaign_id: str = None) -> dict:
+    """Estadísticas por grupo de anuncios: impresiones, clics, coste, conversiones, CTR, CPC medio."""
+    try:
+        client = _build_client()
+        ga_service = client.get_service("GoogleAdsService")
+        customer_id = ACCOUNTS.get(account.lower(), CUSTOMER_ID)
+
+        where_extra = f" AND campaign.id = {campaign_id}" if campaign_id else ""
+        query = f"""
+            SELECT
+                campaign.id,
+                campaign.name,
+                ad_group.id,
+                ad_group.name,
+                ad_group.status,
+                metrics.impressions,
+                metrics.clicks,
+                metrics.cost_micros,
+                metrics.conversions,
+                metrics.ctr,
+                metrics.average_cpc
+            FROM ad_group
+            WHERE segments.date DURING {date_range}{where_extra}
+            ORDER BY metrics.cost_micros DESC
+        """
+        response = ga_service.search(customer_id=customer_id, query=query)
+        ad_groups = []
+        for row in response:
+            ad_groups.append({
+                "campaign_id": row.campaign.id,
+                "campaign_name": row.campaign.name,
+                "ad_group_id": row.ad_group.id,
+                "ad_group_name": row.ad_group.name,
+                "status": row.ad_group.status.name,
+                "impressions": row.metrics.impressions,
+                "clicks": row.metrics.clicks,
+                "cost_eur": round(row.metrics.cost_micros / 1_000_000, 2),
+                "conversions": round(row.metrics.conversions, 2),
+                "ctr_pct": round(row.metrics.ctr * 100, 2),
+                "avg_cpc_eur": round(row.metrics.average_cpc / 1_000_000, 2),
+            })
+        return {"ad_groups": ad_groups, "total": len(ad_groups), "period": date_range}
+
+    except GoogleAdsException as ex:
+        errors = [e.message for e in ex.failure.errors]
+        return {"error": f"Google Ads API error: {errors}"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def get_keywords_stats(date_range: str = "LAST_30_DAYS", account: str = "becier", campaign_id: str = None) -> dict:
+    """Palabras clave con métricas y Quality Score (score, CTR esperado, relevancia del anuncio, experiencia de landing)."""
+    try:
+        client = _build_client()
+        ga_service = client.get_service("GoogleAdsService")
+        customer_id = ACCOUNTS.get(account.lower(), CUSTOMER_ID)
+
+        where_extra = f" AND campaign.id = {campaign_id}" if campaign_id else ""
+        query = f"""
+            SELECT
+                campaign.name,
+                ad_group.name,
+                ad_group_criterion.criterion_id,
+                ad_group_criterion.keyword.text,
+                ad_group_criterion.keyword.match_type,
+                ad_group_criterion.status,
+                ad_group_criterion.quality_info.quality_score,
+                ad_group_criterion.quality_info.creative_quality_score,
+                ad_group_criterion.quality_info.post_click_quality_score,
+                ad_group_criterion.quality_info.search_predicted_ctr,
+                metrics.impressions,
+                metrics.clicks,
+                metrics.cost_micros,
+                metrics.conversions,
+                metrics.ctr,
+                metrics.average_cpc
+            FROM keyword_view
+            WHERE segments.date DURING {date_range}{where_extra}
+            ORDER BY metrics.cost_micros DESC
+        """
+        response = ga_service.search(customer_id=customer_id, query=query)
+        keywords = []
+        for row in response:
+            qi = row.ad_group_criterion.quality_info
+            keywords.append({
+                "campaign_name": row.campaign.name,
+                "ad_group_name": row.ad_group.name,
+                "keyword": row.ad_group_criterion.keyword.text,
+                "match_type": row.ad_group_criterion.keyword.match_type.name,
+                "status": row.ad_group_criterion.status.name,
+                "quality_score": qi.quality_score if qi.quality_score else None,
+                "creative_quality": qi.creative_quality_score.name if qi.creative_quality_score else None,
+                "landing_page_experience": qi.post_click_quality_score.name if qi.post_click_quality_score else None,
+                "expected_ctr": qi.search_predicted_ctr.name if qi.search_predicted_ctr else None,
+                "impressions": row.metrics.impressions,
+                "clicks": row.metrics.clicks,
+                "cost_eur": round(row.metrics.cost_micros / 1_000_000, 2),
+                "conversions": round(row.metrics.conversions, 2),
+                "ctr_pct": round(row.metrics.ctr * 100, 2),
+                "avg_cpc_eur": round(row.metrics.average_cpc / 1_000_000, 2),
+            })
+        return {"keywords": keywords, "total": len(keywords), "period": date_range}
+
+    except GoogleAdsException as ex:
+        errors = [e.message for e in ex.failure.errors]
+        return {"error": f"Google Ads API error: {errors}"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def get_search_terms_report(date_range: str = "LAST_30_DAYS", account: str = "becier", campaign_id: str = None) -> dict:
+    """Términos de búsqueda reales que activaron anuncios, con coste y conversiones — clave para detectar gasto desperdiciado y negativas nuevas."""
+    try:
+        client = _build_client()
+        ga_service = client.get_service("GoogleAdsService")
+        customer_id = ACCOUNTS.get(account.lower(), CUSTOMER_ID)
+
+        where_extra = f" AND campaign.id = {campaign_id}" if campaign_id else ""
+        query = f"""
+            SELECT
+                campaign.name,
+                ad_group.name,
+                search_term_view.search_term,
+                search_term_view.status,
+                metrics.impressions,
+                metrics.clicks,
+                metrics.cost_micros,
+                metrics.conversions,
+                metrics.ctr
+            FROM search_term_view
+            WHERE segments.date DURING {date_range}{where_extra}
+            ORDER BY metrics.cost_micros DESC
+            LIMIT 200
+        """
+        response = ga_service.search(customer_id=customer_id, query=query)
+        search_terms = []
+        for row in response:
+            search_terms.append({
+                "campaign_name": row.campaign.name,
+                "ad_group_name": row.ad_group.name,
+                "search_term": row.search_term_view.search_term,
+                "status": row.search_term_view.status.name,
+                "impressions": row.metrics.impressions,
+                "clicks": row.metrics.clicks,
+                "cost_eur": round(row.metrics.cost_micros / 1_000_000, 2),
+                "conversions": round(row.metrics.conversions, 2),
+                "ctr_pct": round(row.metrics.ctr * 100, 2),
+            })
+        return {"search_terms": search_terms, "total": len(search_terms), "period": date_range}
+
+    except GoogleAdsException as ex:
+        errors = [e.message for e in ex.failure.errors]
+        return {"error": f"Google Ads API error: {errors}"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def get_ads_performance(date_range: str = "LAST_30_DAYS", account: str = "becier", campaign_id: str = None) -> dict:
+    """Anuncios RSA con Ad Strength, nº de títulos/descripciones activos y métricas de rendimiento."""
+    try:
+        client = _build_client()
+        ga_service = client.get_service("GoogleAdsService")
+        customer_id = ACCOUNTS.get(account.lower(), CUSTOMER_ID)
+
+        where_extra = f" AND campaign.id = {campaign_id}" if campaign_id else ""
+        query = f"""
+            SELECT
+                campaign.name,
+                ad_group.name,
+                ad_group_ad.ad.id,
+                ad_group_ad.ad.responsive_search_ad.headlines,
+                ad_group_ad.ad.responsive_search_ad.descriptions,
+                ad_group_ad.ad_strength,
+                ad_group_ad.status,
+                metrics.impressions,
+                metrics.clicks,
+                metrics.cost_micros,
+                metrics.conversions,
+                metrics.ctr
+            FROM ad_group_ad
+            WHERE segments.date DURING {date_range}
+                AND ad_group_ad.ad.type = RESPONSIVE_SEARCH_AD{where_extra}
+            ORDER BY metrics.cost_micros DESC
+        """
+        response = ga_service.search(customer_id=customer_id, query=query)
+        ads = []
+        for row in response:
+            rsa = row.ad_group_ad.ad.responsive_search_ad
+            ads.append({
+                "campaign_name": row.campaign.name,
+                "ad_group_name": row.ad_group.name,
+                "ad_id": row.ad_group_ad.ad.id,
+                "ad_strength": row.ad_group_ad.ad_strength.name if row.ad_group_ad.ad_strength else None,
+                "status": row.ad_group_ad.status.name,
+                "num_headlines": len(rsa.headlines),
+                "num_descriptions": len(rsa.descriptions),
+                "impressions": row.metrics.impressions,
+                "clicks": row.metrics.clicks,
+                "cost_eur": round(row.metrics.cost_micros / 1_000_000, 2),
+                "conversions": round(row.metrics.conversions, 2),
+                "ctr_pct": round(row.metrics.ctr * 100, 2),
+            })
+        return {"ads": ads, "total": len(ads), "period": date_range}
+
+    except GoogleAdsException as ex:
+        errors = [e.message for e in ex.failure.errors]
+        return {"error": f"Google Ads API error: {errors}"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def get_extensions_coverage(account: str = "becier") -> dict:
+    """Cobertura de extensiones (assets) activas a nivel de cuenta y campaña: sitelinks, callouts, structured snippets, llamada, ubicación, etc."""
+    try:
+        client = _build_client()
+        ga_service = client.get_service("GoogleAdsService")
+        customer_id = ACCOUNTS.get(account.lower(), CUSTOMER_ID)
+
+        query = """
+            SELECT
+                campaign.name,
+                asset.type,
+                campaign_asset.status
+            FROM campaign_asset
+            WHERE campaign_asset.status = 'ENABLED'
+        """
+        response = ga_service.search(customer_id=customer_id, query=query)
+        coverage = {}
+        for row in response:
+            campaign_name = row.campaign.name
+            asset_type = row.asset.type_.name
+            coverage.setdefault(campaign_name, {})
+            coverage[campaign_name][asset_type] = coverage[campaign_name].get(asset_type, 0) + 1
+
+        return {"coverage_by_campaign": coverage}
+
+    except GoogleAdsException as ex:
+        errors = [e.message for e in ex.failure.errors]
+        return {"error": f"Google Ads API error: {errors}"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def get_device_performance(date_range: str = "LAST_30_DAYS", account: str = "becier") -> dict:
+    """Rendimiento segmentado por dispositivo (móvil, ordenador, tablet)."""
+    try:
+        client = _build_client()
+        ga_service = client.get_service("GoogleAdsService")
+        customer_id = ACCOUNTS.get(account.lower(), CUSTOMER_ID)
+
+        query = f"""
+            SELECT
+                segments.device,
+                metrics.impressions,
+                metrics.clicks,
+                metrics.cost_micros,
+                metrics.conversions,
+                metrics.ctr,
+                metrics.average_cpc
+            FROM campaign
+            WHERE segments.date DURING {date_range}
+        """
+        response = ga_service.search(customer_id=customer_id, query=query)
+        devices = {}
+        for row in response:
+            device = row.segments.device.name
+            d = devices.setdefault(device, {"impressions": 0, "clicks": 0, "cost_micros": 0, "conversions": 0.0})
+            d["impressions"] += row.metrics.impressions
+            d["clicks"] += row.metrics.clicks
+            d["cost_micros"] += row.metrics.cost_micros
+            d["conversions"] += row.metrics.conversions
+
+        result = {}
+        for device, d in devices.items():
+            result[device] = {
+                "impressions": d["impressions"],
+                "clicks": d["clicks"],
+                "cost_eur": round(d["cost_micros"] / 1_000_000, 2),
+                "conversions": round(d["conversions"], 2),
+                "ctr_pct": round((d["clicks"] / d["impressions"] * 100), 2) if d["impressions"] else 0,
+            }
+        return {"by_device": result, "period": date_range}
+
+    except GoogleAdsException as ex:
+        errors = [e.message for e in ex.failure.errors]
+        return {"error": f"Google Ads API error: {errors}"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def get_recommendations(account: str = "becier") -> dict:
+    """Recomendaciones activas que Google Ads sugiere para la cuenta (tipo e impacto estimado)."""
+    try:
+        client = _build_client()
+        ga_service = client.get_service("GoogleAdsService")
+        customer_id = ACCOUNTS.get(account.lower(), CUSTOMER_ID)
+
+        query = """
+            SELECT
+                recommendation.type,
+                recommendation.campaign,
+                recommendation.dismissed
+            FROM recommendation
+            WHERE recommendation.dismissed = FALSE
+        """
+        response = ga_service.search(customer_id=customer_id, query=query)
+        recommendations = []
+        for row in response:
+            recommendations.append({
+                "type": row.recommendation.type_.name,
+                "campaign": row.recommendation.campaign,
+            })
+        return {"recommendations": recommendations, "total": len(recommendations)}
 
     except GoogleAdsException as ex:
         errors = [e.message for e in ex.failure.errors]

@@ -1,0 +1,396 @@
+--- Fila 42 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Mi gato tiene el pelo apagado y se le nota reseca la piel.
+  Audiencia: Gato
+  Hook v1: ¿Tu gato tiene el pelo sin brillo y se rasca más de lo normal?
+
+--- Fila 43 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Mi gato tiene el pelo apagado y se le nota reseca la piel.
+  Audiencia: Gato
+  Hook v1: El pelo y la piel son el primer síntoma visible de una mala alimentación.
+
+--- Fila 44 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Mi gato tiene el pelo apagado y se le nota reseca la piel.
+  Audiencia: Gato
+  Hook v1: Este es el pelo de un gato a las 3 semanas de cambiar su comida.
+
+--- Fila 45 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Mi gato tiene el pelo apagado y se le nota reseca la piel.
+  Audiencia: Gato
+  Hook v1: Llevaba meses probando champús para gatos y el problema no era el pelo, era el pienso.
+
+--- Fila 46 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Mi gato tiene el pelo apagado y se le nota reseca la piel.
+  Audiencia: Gato
+  Hook v1: ¿Ves pelo de tu gato por todas partes? La comida natural puede ser la solución al problema
+
+--- Fila 47 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Quiero darle algo natural pero no tengo tiempo de cocinarle nada.
+  Audiencia: Gato
+  Hook v1: ¿No tienes tiempo de cocinarle a tu gato, pero tampoco quieres darle cualquier cosa?
+
+--- Fila 48 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Quiero darle algo natural pero no tengo tiempo de cocinarle nada.
+  Audiencia: Gato
+  Hook v1: ¿Quieres darle algo casero a tu gato, pero no tienes tiempo de cocinar?
+
+--- Fila 49 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Mi gato es muy especial con la comida, no sé si se la va a comer.
+  Audiencia: Gato
+  Hook v1: Mi gato dejaba el plato a medias con todo... hasta que probó esto.
+
+--- Fila 50 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Mi gato es muy especial con la comida, no sé si se la va a comer.
+  Audiencia: Gato
+  Hook v1: ¿Tu gato es especial con la comida?
+
+--- Fila 51 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Mi gato es muy especial con la comida, no sé si se la va a comer.
+  Audiencia: Gato
+  Hook v1: Los gatos rechazan la comida nueva por el olfato, no por capricho.
+
+--- Fila 52 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Mi gato es muy especial con la comida, no sé si se la va a comer.
+  Audiencia: Gato
+  Hook v1: ¿Nunca sabes si tu gato va a comerse la comida?
+
+--- Fila 53 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Mi gato es muy especial con la comida, no sé si se la va a comer.
+  Audiencia: Gato
+  Hook v1: ¿Tu gato siempre deja el plato a medias?
+
+--- Fila 54 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: No sé cuánto pienso está comiendo realmente ni si es la cantidad correcta.
+  Audiencia: Gato
+  Hook v1: ¿Le sirves la comida a ojo a tu gato sin saber si es la ración correcta?
+
+--- Fila 55 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: No sé cuánto pienso está comiendo realmente ni si es la cantidad correcta.
+  Audiencia: Gato
+  Hook v1: ¿Tu gato tiene sobrepeso y no sabes si es por las raciones?
+
+--- Fila 56 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: No sé cuánto pienso está comiendo realmente ni si es la cantidad correcta.
+  Audiencia: Gato
+  Hook v1: ¿Te preocupa que tu gato esté comiendo de más sin que te des cuenta?
+
+--- Fila 57 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Me preocupa que algo natural no cubra todo lo que mi gato necesita.
+  Audiencia: Gato
+  Hook v1: ¿Crees que la comida natural no cubre todo lo que necesita tu gato?
+
+--- Fila 58 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Me preocupa que algo natural no cubra todo lo que mi gato necesita.
+  Audiencia: Gato
+  Hook v1: ¿Te preocupa que un alimento natural no sea nutricionalmente completo?
+
+--- Fila 59 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Me preocupa que algo natural no cubra todo lo que mi gato necesita.
+  Audiencia: Gato
+  Hook v1: ¿No sabes si una dieta natural cubre todas las necesidades de tu gato?
+
+--- Fila 60 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Me preocupa que algo natural no cubra todo lo que mi gato necesita.
+  Audiencia: Gato
+  Hook v1: ¿Quieres darle algo natural pero te preocupa que le falte algo importante?
+
+--- Fila 61 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Me preocupa el proceso de cambiarle la comida, no sé cómo hacerlo bien.
+  Audiencia: Gato
+  Hook v1: Así se cambia la comida de un gato sin que la rechace.
+
+--- Fila 62 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Me preocupa el proceso de cambiarle la comida, no sé cómo hacerlo bien.
+  Audiencia: Gato
+  Hook v1: ¿Te da miedo cambiarle la comida a tu gato por si la rechaza?
+
+--- Fila 63 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Me preocupa el proceso de cambiarle la comida, no sé cómo hacerlo bien.
+  Audiencia: Gato
+  Hook v1: Sabemos que los gatos odian el cambio, por eso diseñamos la transición pensando en ellos.
+
+--- Fila 64 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Siento que el pienso de toda la vida es solo comida industrial.
+  Audiencia: Gato
+  Hook v1: ¿Crees que el pienso para gatos es demasiado industrial y te gustaría darle algo mejor?
+
+--- Fila 65 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Siento que el pienso de toda la vida es solo comida industrial.
+  Audiencia: Gato
+  Hook v1: Dejé de sentirme culpable en cuanto vi lo que llevaba de verdad su comida.
+
+--- Fila 66 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Las heces de mi gato no tienen buena pinta y el olor es muy fuerte.
+  Audiencia: Gato
+  Hook v1: Las heces de tu gato dicen mucho más de lo que crees sobre su comida.
+
+--- Fila 67 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Las heces de mi gato no tienen buena pinta y el olor es muy fuerte.
+  Audiencia: Gato
+  Hook v1: ¿Las heces de tu gato no son como deberian?
+
+--- Fila 68 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Las heces de mi gato no tienen buena pinta y el olor es muy fuerte.
+  Audiencia: Gato
+  Hook v1: ¿Las heces de tu gato huelen demasiado fuerte?
+
+--- Fila 69 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Sé que mi gato bebe poca agua pero no sé si es un riesgo real.
+  Audiencia: Gato
+  Hook v1: ¿Sabías que los gatos apenas beben agua por instinto? Por eso la hidratación tiene que venir también de la comida.
+
+--- Fila 70 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Sé que mi gato bebe poca agua pero no sé si es un riesgo real.
+  Audiencia: Gato
+  Hook v1: ¿Tu gato no toca el bebedero y te preocupa su hidratación?
+
+--- Fila 71 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Me pregunto si vale la pena pagar más por algo natural.
+  Audiencia: Gato
+  Hook v1: ¿Te preguntas si vale la pena pagar más por una comida natural?
+
+--- Fila 72 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Me pregunto si vale la pena pagar más por algo natural.
+  Audiencia: Gato
+  Hook v1: ¿Dudas si el precio extra de la comida natural realmente se nota en la salud de tu gato?
+
+--- Fila 73 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Me pregunto si vale la pena pagar más por algo natural.
+  Audiencia: Gato
+  Hook v1: ¿Te cuesta justificar pagar más por algo que 'parece' lo mismo?
+
+--- Fila 74 ---
+  Funnel: 
+  ¿Hecho?: 
+  Link video: 
+  Activo: FALSE
+  Prioridad: 
+  Grabado por: 
+  Ángulo: 
+  Problemática: Me pregunto si vale la pena pagar más por algo natural.
+  Audiencia: Gato
+  Hook v1: ¿Piensas que la comida natural es un lujo que no puedes permitirte?
+
