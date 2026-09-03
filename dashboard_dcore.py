@@ -1041,6 +1041,7 @@ _CHART_BASE = dict(
     template="plotly_dark", paper_bgcolor="#12152a", plot_bgcolor="#12152a",
     font=dict(family="sans-serif", color="#6a7aaa"),
     hoverlabel=dict(bgcolor="#12152a", bordercolor="#2e3560", font_color="#eef0ff"),
+    dragmode=False,
 )
 _NO_INTERACT = {"displayModeBar": False, "scrollZoom": False, "doubleClick": False, "showTips": False}
 _LEGEND_STATIC = dict(itemclick=False, itemdoubleclick=False, bgcolor="rgba(0,0,0,0)", font=dict(size=12, color="#b0b8d8"))
