@@ -389,6 +389,21 @@ def render_disclaimers():
     )
 
 
+def _dies_1_i_15(inici: date, fi: date) -> list:
+    """Retorna els dies 1 i 15 de cada mes entre `inici` i `fi` (inclosos), per
+    dibuixar-los com a marques suaus de referència al Gantt."""
+    dies = []
+    cursor = date(inici.year, inici.month, 1)
+    while cursor <= fi:
+        if inici <= cursor <= fi:
+            dies.append(cursor)
+        dia15 = cursor.replace(day=15)
+        if inici <= dia15 <= fi:
+            dies.append(dia15)
+        cursor = date(cursor.year + (cursor.month == 12), cursor.month % 12 + 1, 1)
+    return dies
+
+
 # ─── CHARTS ─────────────────────────────────────────────────────────────────────
 def chart_gantt(tasques: list, today: date) -> go.Figure:
     ordered = sorted(
@@ -413,6 +428,12 @@ def chart_gantt(tasques: list, today: date) -> go.Figure:
                             f'<br>Estat: {estat_txt}<extra></extra>'),
             showlegend=False,
         ))
+    if ordered:
+        rang_inici = min(t["inici"] for t in ordered)
+        rang_fi = max(t["fi"] for t in ordered)
+        for dia_mes in _dies_1_i_15(rang_inici, rang_fi):
+            fig.add_vline(x=dia_mes.isoformat(), line=dict(color="#232840", width=1))
+
     fig.add_vline(x=today.isoformat(), line=dict(color=NEUTRAL_TXT, width=1.5, dash="dot"))
     fig.add_annotation(
         x=today.isoformat(), y=1, yref="paper", yanchor="bottom", showarrow=False,
@@ -425,8 +446,8 @@ def chart_gantt(tasques: list, today: date) -> go.Figure:
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(color="#c8cce0", size=11.5),
-        xaxis=dict(type="date", gridcolor="#1a1e35", tickfont=dict(color="#5a6080")),
-        yaxis=dict(autorange="reversed", gridcolor="#1a1e35"),
+        xaxis=dict(type="date", gridcolor="#1a1e35", tickfont=dict(color="#5a6080"), fixedrange=True),
+        yaxis=dict(autorange="reversed", gridcolor="#1a1e35", fixedrange=True),
     )
     return fig
 
@@ -448,8 +469,8 @@ def chart_per_responsable(tasques: list, highlight: list | None = None) -> go.Fi
         margin=dict(l=10, r=10, t=10, b=10),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         font=dict(color="#c8cce0", size=11.5),
-        xaxis=dict(gridcolor="#1a1e35", tickfont=dict(color="#5a6080"), dtick=1),
-        yaxis=dict(gridcolor="#1a1e35"),
+        xaxis=dict(gridcolor="#1a1e35", tickfont=dict(color="#5a6080"), dtick=1, fixedrange=True),
+        yaxis=dict(gridcolor="#1a1e35", fixedrange=True),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(size=11)),
     )
     return fig
@@ -481,8 +502,8 @@ def chart_per_proposta(tasques: list, highlight: list | None = None) -> go.Figur
         margin=dict(l=10, r=30, t=10, b=10),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         font=dict(color="#c8cce0", size=11.5),
-        xaxis=dict(range=[0, 115], gridcolor="#1a1e35", tickfont=dict(color="#5a6080"), ticksuffix="%"),
-        yaxis=dict(gridcolor="#1a1e35"),
+        xaxis=dict(range=[0, 115], gridcolor="#1a1e35", tickfont=dict(color="#5a6080"), ticksuffix="%", fixedrange=True),
+        yaxis=dict(gridcolor="#1a1e35", fixedrange=True),
     )
     return fig
 
@@ -507,8 +528,8 @@ def chart_indicador(ind: dict, months: list) -> go.Figure:
         margin=dict(l=10, r=10, t=10, b=10),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         font=dict(color="#c8cce0", size=10.5),
-        xaxis=dict(gridcolor="#1a1e35", tickfont=dict(color="#5a6080")),
-        yaxis=dict(gridcolor="#1a1e35"),
+        xaxis=dict(gridcolor="#1a1e35", tickfont=dict(color="#5a6080"), fixedrange=True),
+        yaxis=dict(gridcolor="#1a1e35", fixedrange=True),
         showlegend=False,
     )
     return fig
